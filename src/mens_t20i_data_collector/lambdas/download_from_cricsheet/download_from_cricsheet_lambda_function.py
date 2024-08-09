@@ -1,4 +1,4 @@
-from src.lambdas.download_from_cricsheet.lambda_logic import print_string
+from mens_t20i_data_collector.lambdas.download_from_cricsheet.lambda_logic import print_string
 
 
 def handler(event, context):
