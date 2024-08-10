@@ -1,6 +1,6 @@
 import aws_cdk as core
 import aws_cdk.assertions as assertions
-from men_t20i_dataset.mens_t20i_dataset_stack import MenT20IDatasetStack
+from src.cdk.mens_t20i_dataset_stack import MenT20IDatasetStack
 
 
 # example tests. To run these tests, uncomment this file along with the example

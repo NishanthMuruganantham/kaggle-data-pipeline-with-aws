@@ -24,17 +24,26 @@ class MenT20IDatasetStack(Stack):
             self, cricsheet_data_downloading_bucket_name, removal_policy=RemovalPolicy.DESTROY,
         )
 
+        # Creating Lambda layer for src files
+        lambda_layer = _lambda.LayerVersion(
+            self,
+            "src_layer",
+            code=_lambda.Code.from_asset("mens_t20i_data_collector.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_8],
+        )
+
         # Defining the lambda function
         cricsheet_data_downloading_lambda = _lambda.Function(
             self,
             "cricsheet_data_downloading_lambda",
-            code=_lambda.Code.from_asset("src/lambdas/download_from_cricsheet"),
+            code=_lambda.Code.from_asset("output\download_from_cricsheet_lambda_function.zip"),
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
             },
             function_name="cricsheet-data-downloading-lambda",
             handler="download_from_cricsheet_lambda_function.handler",
-            runtime=_lambda.Runtime.PYTHON_3_9,
+            layers=[lambda_layer],
+            runtime=_lambda.Runtime.PYTHON_3_8,
         )
 
         # Granting the lambda function access to the S3 bucket

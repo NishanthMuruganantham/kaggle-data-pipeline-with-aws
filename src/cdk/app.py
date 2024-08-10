@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import yaml
 import aws_cdk as cdk
-from men_t20i_dataset.mens_t20i_dataset_stack import MenT20IDatasetStack
+from cdk.mens_t20i_dataset_stack import MenT20IDatasetStack
 
 
 # Load configuration from YAML file
