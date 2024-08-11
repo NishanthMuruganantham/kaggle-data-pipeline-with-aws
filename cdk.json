@@ -1,5 +1,5 @@
 {
-  "app": "python src/cdk/app.py",
+  "app": "python aws/app.py",
   "watch": {
     "include": [
       "**"

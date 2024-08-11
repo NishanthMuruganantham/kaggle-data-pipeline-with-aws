@@ -28,7 +28,7 @@ class MenT20IDatasetStack(Stack):
         lambda_layer = _lambda.LayerVersion(
             self,
             "src_layer",
-            code=_lambda.Code.from_asset("mens_t20i_data_collector.zip"),
+            code=_lambda.Code.from_asset("new.zip"),
             compatible_runtimes=[_lambda.Runtime.PYTHON_3_8],
         )
 
