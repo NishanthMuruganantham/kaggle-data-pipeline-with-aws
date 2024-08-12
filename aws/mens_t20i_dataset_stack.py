@@ -19,39 +19,45 @@ class MenT20IDatasetStack(Stack):
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # Creating S3 Bucket for downloading data from cricsheet
+        # S3 bucket for downloading data from Cricsheet
         cricsheet_data_downloading_bucket = s3.Bucket(
-            self, cricsheet_data_downloading_bucket_name, removal_policy=RemovalPolicy.DESTROY,
+            self,
+            cricsheet_data_downloading_bucket_name,
+            removal_policy=RemovalPolicy.DESTROY,
         )
 
-        # Creating Lambda layer for src files
+        # Lambda layer containing the necessary code and packages
         lambda_layer = _lambda.LayerVersion(
             self,
-            "src_layer",
-            code=_lambda.Code.from_asset("new.zip"),
-            compatible_runtimes=[_lambda.Runtime.PYTHON_3_8],
+            "MensT20IDataCollectorLayer",
+            code=_lambda.Code.from_asset("output/mens_t20i_data_collector.zip"),
+            compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
+            description="Layer containing the necessary code and packages for collecting men's T20I data",
         )
 
-        # Defining the lambda function
+        # Lambda function for downloading data from Cricsheet
         cricsheet_data_downloading_lambda = _lambda.Function(
             self,
             "cricsheet_data_downloading_lambda",
-            code=_lambda.Code.from_asset("output\download_from_cricsheet_lambda_function.zip"),
+            code=_lambda.Code.from_asset("output/download_from_cricsheet_lambda_function.zip"),
+            handler="download_from_cricsheet_lambda_function.handler",
+            runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
             },
             function_name="cricsheet-data-downloading-lambda",
-            handler="download_from_cricsheet_lambda_function.handler",
             layers=[lambda_layer],
-            runtime=_lambda.Runtime.PYTHON_3_8,
         )
-
-        # Granting the lambda function access to the S3 bucket
+        # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_data_downloading_lambda)
-
+        # Policy for CloudWatch logging
         cricsheet_data_downloading_lambda.add_to_role_policy(
             iam.PolicyStatement(
-                actions=["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"],
-                resources=["*"]
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                ],
+                resources=["*"],
             )
         )
