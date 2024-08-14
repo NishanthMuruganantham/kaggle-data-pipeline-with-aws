@@ -9,6 +9,7 @@ from build.constants import (
     PACKAGE_NAME,
     LAYER_PATH,
     OUTPUT_FOLDER,
+    REQUIREMENTS_TXT_FILE_PATH,
     SETUP_FILE_PATH,
     SITE_PACKAGES_PATH,
     TARBALL_PATH,
@@ -39,7 +40,7 @@ def _clean_up():
     logging.info("Cleanup completed.")
 
 def _create_layer_package():
-    """Creates the AWS Lambda layer package."""
+    """Creates the AWS Lambda layer package including compatible libraries."""
     logging.info("Creating layer package...")
     _run_command(f"python {SETUP_FILE_PATH} sdist")
 
@@ -47,6 +48,13 @@ def _create_layer_package():
     logging.info(f"Extracting {TARBALL_PATH} to {SITE_PACKAGES_PATH}")
     _run_command(f"tar -xzf {TARBALL_PATH} --strip-components=2 -C {SITE_PACKAGES_PATH}")
 
+    # Install pandas, numpy, and lxml with specific compatible versions
+    logging.info(f"Installing required dependencies from {REQUIREMENTS_TXT_FILE_PATH}")
+    _run_command(
+        f"pip install -r {REQUIREMENTS_TXT_FILE_PATH} -t {SITE_PACKAGES_PATH} --platform manylinux2014_x86_64 --only-binary=:all: --no-cache-dir"
+    )
+
+    # Create the final ZIP file for the Lambda layer
     destination_zip = OUTPUT_FOLDER / f"{PACKAGE_NAME}.zip"
     logging.info(f"Zipping contents of {LAYER_PATH} to {destination_zip}")
     shutil.make_archive(base_name=destination_zip.stem, format='zip', root_dir=LAYER_PATH)
