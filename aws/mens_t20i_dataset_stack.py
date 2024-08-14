@@ -2,10 +2,12 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_s3 as s3,
+    Duration,
     Stack,
     RemovalPolicy,
 )
 from constructs import Construct
+from constants import AWS_SDK_PANDAS_LAYER_ARN
 
 
 class MenT20IDatasetStack(Stack):
@@ -27,13 +29,15 @@ class MenT20IDatasetStack(Stack):
         )
 
         # Lambda layer containing the necessary code and packages
-        lambda_layer = _lambda.LayerVersion(
+        package_layer = _lambda.LayerVersion(
             self,
             "MensT20IDataCollectorLayer",
             code=_lambda.Code.from_asset("output/mens_t20i_data_collector.zip"),
             compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
             description="Layer containing the necessary code and packages for collecting men's T20I data",
         )
+        # Pandas layer by AWS
+        pandas_layer = _lambda.LayerVersion.from_layer_version_arn(self, "PandasLayer", AWS_SDK_PANDAS_LAYER_ARN)
 
         # Lambda function for downloading data from Cricsheet
         cricsheet_data_downloading_lambda = _lambda.Function(
@@ -46,7 +50,11 @@ class MenT20IDatasetStack(Stack):
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
             },
             function_name="cricsheet-data-downloading-lambda",
-            layers=[lambda_layer],
+            layers=[
+                package_layer,
+                pandas_layer,
+            ],
+            timeout=Duration.minutes(1),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_data_downloading_lambda)

@@ -10,6 +10,7 @@ PACKAGE_NAME = "mens_t20i_data_collector"
 PYTHON_VERSION = "3.11"
 LAYER_PATH = Path("layer")
 OUTPUT_FOLDER = Path("output")
+REQUIREMENTS_TXT_FILE_PATH = Path("requirements.txt")
 SETUP_FILE_PATH = Path("setup.py")
 SITE_PACKAGES_PATH = LAYER_PATH / f"python/lib/python{PYTHON_VERSION}/site-packages"
 TARBALL_PATH = DIST_FOLDER / f"{PACKAGE_NAME}-0.1.tar.gz"
