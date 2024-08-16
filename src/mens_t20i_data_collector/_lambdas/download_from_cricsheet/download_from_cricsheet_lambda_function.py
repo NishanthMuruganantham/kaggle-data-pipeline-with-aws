@@ -12,7 +12,7 @@ from mens_t20i_data_collector._lambdas.constants import (
 # Setup logging
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 logger = logging.getLogger()
 logger.addHandler(handler)
@@ -20,10 +20,11 @@ logger.setLevel(logging.INFO)
 
 
 class DownloadDataFromCricsheetHandler:
+
     def __init__(self) -> None:
         self._cricsheet_url = CRICSHEET_DATA_DOWNLOADING_URL
-        self._s3_bucket_name = os.getenv('DOWNLOAD_BUCKET_NAME')
-        self._s3_client = boto3.client('s3')
+        self._s3_bucket_name = os.getenv("DOWNLOAD_BUCKET_NAME")
+        self._s3_client = boto3.client("s3")
         self._s3_folder_name = CRICSHEET_DATA_S3_FOLDER_NAME
 
         if not self._s3_bucket_name:
@@ -43,7 +44,7 @@ class DownloadDataFromCricsheetHandler:
         zip_file_path = f"/tmp/{zip_file_name}"
 
         try:
-            with open(zip_file_path, 'wb') as file:
+            with open(zip_file_path, "wb") as file:
                 file.write(response.content)
             logger.info(f"File downloaded successfully to {zip_file_path}")
         except IOError as e:
@@ -52,8 +53,8 @@ class DownloadDataFromCricsheetHandler:
 
         try:
             self._s3_client.upload_file(
-                Filename=zip_file_path,
                 Bucket=self._s3_bucket_name,
+                Filename=zip_file_path,
                 Key=f"{self._s3_folder_name}/{zip_file_name}"
             )
             logger.info(f"File uploaded successfully to S3 bucket {self._s3_bucket_name} with key {self._s3_folder_name}/{zip_file_name}")
@@ -70,13 +71,13 @@ def handler(event, context):
         logger.info(response_message)
         logging.shutdown()
         return {
-            'statusCode': 200,
-            'body': response_message
+            "statusCode": 200,
+            "body": response_message
         }
     except Exception as e:
         logger.error(f"Handler execution failed: {e}")
         logging.shutdown()
         return {
-            'statusCode': 500,
-            'body': f"Internal Server Error: {str(e)}"
+            "statusCode": 500,
+            "body": f"Internal Server Error: {str(e)}"
         }
