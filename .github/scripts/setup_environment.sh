@@ -1,11 +1,9 @@
 #!/bin/bash
 
-bash create_venv.sh
-source venv/bin/activate
-if [ "$1" == 'pylint_check' ]; then
-    pip install pylint
-elif [ "$1" == 'pyright_check' ]; then
-    pip install pyright
-else
-    pip install isort
-fi
+VENV=${1:-venv}
+
+python3.11 -m venv $VENV && \
+    source $VENV/bin/activate && \
+    python3.11 -m pip install pip==23.3.1 && \
+    pip install -e '.[build]' && \
+    pip install -r requirements-test.txt
