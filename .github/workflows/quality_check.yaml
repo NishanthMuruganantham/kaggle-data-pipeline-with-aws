@@ -24,7 +24,7 @@ jobs:
                     python-version: 3.11
             -
                 name: Setting up the  environment
-                run: bash .github/scripts/setup_environment.sh
+                run: bash .github/scripts/setup_environment.sh ${{ matrix.check_type }}
             - 
                 name: Running the quality checks
                 run: bash .github/scripts/quality_checks.sh ${{ matrix.check_type }}
