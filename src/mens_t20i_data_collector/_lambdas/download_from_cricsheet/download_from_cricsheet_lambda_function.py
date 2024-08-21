@@ -1,8 +1,9 @@
-import os
-import requests
 import logging
-import boto3
+import os
+import zipfile
 from typing import List, Set
+import boto3
+import requests
 from botocore.exceptions import BotoCoreError, ClientError
 from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_DOWNLOADING_URL,
@@ -10,16 +11,14 @@ from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_S3_FOLDER_TO_STORE_NEW_JSON_FILES_ZIP,
     CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP
 )
-import zipfile
-
 
 # Setup logging
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-handler.setFormatter(formatter)
+stream_handler.setFormatter(formatter)
 logger = logging.getLogger()
-logger.addHandler(handler)
+logger.addHandler(stream_handler)
 logger.setLevel(logging.INFO)
 
 
@@ -42,7 +41,7 @@ class DownloadDataFromCricsheetHandler:
     def download_data_from_cricsheet(self) -> str:
         try:
             logger.info(f"Starting download from {self._cricsheet_url}")
-            response = requests.get(self._cricsheet_url)
+            response = requests.get(self._cricsheet_url, timeout=10)
             response.raise_for_status()
         except requests.RequestException as e:
             logger.error(f"Failed to download data from Cricsheet: {e}")
@@ -129,7 +128,7 @@ class DownloadDataFromCricsheetHandler:
             raise
 
 
-def handler(event, context):
+def handler(_, __):
     try:
         downloader = DownloadDataFromCricsheetHandler()
         zip_file_path = downloader.download_data_from_cricsheet()
@@ -140,7 +139,7 @@ def handler(event, context):
             "statusCode": 200,
             "body": "Data downloaded and placed successfully for processing"
         }
-    except Exception as e:
+    except Exception as e:      # pylint: disable=broad-exception-caught
         logger.error(f"Handler execution failed: {e}")
         logging.shutdown()
         return {

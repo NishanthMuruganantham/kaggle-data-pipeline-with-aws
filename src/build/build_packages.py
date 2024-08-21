@@ -1,3 +1,29 @@
+"""
+This module automates the build process for packaging AWS Lambda layers and handler files.
+
+The script performs the following tasks:
+1. Configures logging for tracking the build process.
+2. Builds packages required for AWS Lambda layers by:
+    - Creating a distribution tarball from the project setup configuration.
+    - Extracting the tarball into a site-packages directory.
+    - Installing necessary Python dependencies into the site-packages directory, ensuring compatibility with AWS Lambda's runtime environment.
+    - Packaging the site-packages directory into a zip file suitable for deployment as a Lambda layer.
+3. Zips individual AWS Lambda handler files for deployment.
+4. Cleans up temporary files and directories created during the build process.
+
+Key constants and paths are imported from the `build.constants` module.
+
+Functions:
+- `build_packages()`: Coordinates the overall package build process, including cleanup.
+- `_clean_up()`: Deletes temporary files and directories.
+- `_create_layer_package()`: Handles the creation of the AWS Lambda layer package, including dependency installation and zipping.
+- `_run_command(command)`: Executes shell commands with error handling.
+- `_zip_lambda_handler_files()`: Compresses individual Lambda handler files into zip archives.
+
+Usage:
+Call `build_packages()` to start the process of creating the necessary Lambda deployment packages.
+"""
+
 import logging
 import os
 import shutil
