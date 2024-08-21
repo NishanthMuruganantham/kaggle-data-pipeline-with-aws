@@ -1,0 +1,16 @@
+
+[tool.setuptools_scm]
+
+[tool.isort]
+lines_between_sections=0
+multi_line_output = 3
+
+[tool.pylint]
+disable = [
+    "logging-fstring-interpolation",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "missing-module-docstring",
+]
+max-attributes = 10
+max-line-length = 160
