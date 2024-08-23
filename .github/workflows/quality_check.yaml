@@ -1,0 +1,30 @@
+name: quality_check
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        types: [opened, synchronize]
+
+jobs:
+    quality_checks:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                check_type: ['imports_check', 'pylint_check', 'pyright_check']
+        steps:
+            - 
+                name: Checkout code
+                uses: actions/checkout@v4
+            - 
+                name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                    python-version: 3.11
+            -
+                name: Setting up the  environment
+                run: bash .github/scripts/setup_environment.sh
+            - 
+                name: Running the quality checks
+                run: bash .github/scripts/quality_checks.sh ${{ matrix.check_type }}
