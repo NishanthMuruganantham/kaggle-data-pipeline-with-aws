@@ -2,6 +2,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_s3 as s3,
+    aws_s3_notifications as s3_notification,
     Duration,
     Stack,
     RemovalPolicy,
@@ -52,7 +53,6 @@ class MenT20IDatasetStack(Stack):
             function_name="cricsheet-data-downloading-lambda",
             layers=[
                 package_layer,
-                pandas_layer,
             ],
             timeout=Duration.minutes(1),
         )
@@ -68,4 +68,38 @@ class MenT20IDatasetStack(Stack):
                 ],
                 resources=["*"],
             )
+        )
+
+        # Lambda function for processing cricsheet data
+        cricsheet_data_processing_lambda = _lambda.Function(
+            self,
+            "cricsheet_data_processing_lambda",
+            code=_lambda.Code.from_asset("output/process_cricsheet_data_lambda_function.zip"),
+            handler="process_cricsheet_data_lambda_function.handler",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            function_name="cricsheet-data-processing-lambda",
+            layers=[
+                package_layer,
+                pandas_layer,
+            ],
+            timeout=Duration.minutes(1),
+        )
+        # Permissions for lambda functions to the S3 bucket
+        cricsheet_data_downloading_bucket.grant_read_write(cricsheet_data_processing_lambda)
+        # Policy for CloudWatch logging
+        cricsheet_data_processing_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                ],
+                resources=["*"],
+            )
+        )
+        # S3 event notification to trigger the processing lambda
+        cricsheet_data_downloading_bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            s3_notification.LambdaDestination(cricsheet_data_processing_lambda),
+            s3.NotificationKeyFilter(prefix="cricsheet_data/new_cricsheet_data/", suffix=".zip")
         )
