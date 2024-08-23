@@ -32,16 +32,15 @@ import zipfile
 from build.constants import (
     DIST_FOLDER,
     LAMBDA_HANDLER_FILES,
-    PACKAGE_NAME,
     LAYER_PATH,
     OUTPUT_FOLDER,
+    PACKAGE_NAME,
     REQUIREMENTS_TXT_FILE_PATH,
     SETUP_FILE_PATH,
     SITE_PACKAGES_PATH,
     TARBALL_PATH,
-    TEMPORARY_PACKAGE_FOLDER,
+    TEMPORARY_PACKAGE_FOLDER
 )
-
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
