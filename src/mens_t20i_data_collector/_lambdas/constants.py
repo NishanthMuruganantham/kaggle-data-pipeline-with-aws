@@ -15,3 +15,4 @@ CRICSHEET_DATA_DOWNLOADING_URL: str = "https://cricsheet.org/downloads/t20s_male
 CRICSHEET_DATA_S3_FOLDER_NAME: str = "cricsheet_data"
 CRICSHEET_DATA_S3_FOLDER_TO_STORE_NEW_JSON_FILES_ZIP: str = "new_cricsheet_data"
 CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP: str = "processed_data"
+OUTPUT_FOLDER_NAME: str = "output_files"

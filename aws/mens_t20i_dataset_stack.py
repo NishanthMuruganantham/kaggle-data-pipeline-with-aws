@@ -85,6 +85,7 @@ class MenT20IDatasetStack(Stack):
                 package_layer,
                 pandas_layer,
             ],
+            memory_size=300,
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
