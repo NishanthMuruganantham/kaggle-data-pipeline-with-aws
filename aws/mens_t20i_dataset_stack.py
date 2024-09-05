@@ -1,6 +1,9 @@
 from aws_cdk import (
+    aws_dynamodb as dynamodb,
     aws_iam as iam,
     aws_lambda as _lambda,
+    aws_sns as sns,
+    aws_sqs as sqs,
     aws_s3 as s3,
     aws_s3_notifications as s3_notification,
     Duration,
@@ -27,6 +30,53 @@ class MenT20IDatasetStack(Stack):
             self,
             cricsheet_data_downloading_bucket_name,
             removal_policy=RemovalPolicy.DESTROY,
+        )
+
+        ##################  SNS Configurations ##########
+        # SNS Topic from which the SQS queues get the data
+        cricsheet_json_data_extraction_sns_topic = sns.Topic(
+            self,
+            "cricsheet_json_data_extraction_sns_topic",
+            topic_name="cricsheet_json_data_extraction_sns_topic",
+        )
+
+        ################# DLQ Configurations #############
+        # DLQ for the deliverywise data extraction from the JSON files
+        cricsheet_deliverywise_data_extraction_dlq = sqs.Queue(
+            self,
+            "cricsheet_deliverywise_data_extraction_dlq",
+            queue_name="cricsheet_deliverywise_data_extraction_dlq",
+            retention_period=Duration.days(14),
+        )
+        cricsheet_matchwise_data_extraction_dlq = sqs.Queue(
+            self,
+            "cricsheet_matchwise_data_extraction_dlq",
+            queue_name="cricsheet_matchwise_data_extraction_dlq",
+            retention_period=Duration.days(14),
+        )
+
+        ################# SQS Configurations #############
+        # SQS Topic for the deliverywise data extraction from the JSON files
+        cricsheet_deliverywise_data_extraction_sqs_queue = sqs.Queue(
+            self,
+            "cricsheet_deliverywise_data_extraction_sqs_queue",
+            queue_name="cricsheet_deliverywise_data_extraction_sqs_queue",
+            visibility_timeout=Duration.minutes(10),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=2,
+                queue=cricsheet_deliverywise_data_extraction_dlq,
+            ),
+        )
+        # SQS Topic for the matchwise data extraction from the JSON files
+        cricsheet_matchwise_data_extraction_sqs_queue = sqs.Queue(
+            self,
+            "cricsheet_matchwise_data_extraction_sqs_queue",
+            queue_name="cricsheet_matchwise_data_extraction_sqs_queue",
+            visibility_timeout=Duration.minutes(10),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=2,
+                queue=cricsheet_matchwise_data_extraction_dlq,
+            ),
         )
 
         # Lambda layer containing the necessary code and packages
