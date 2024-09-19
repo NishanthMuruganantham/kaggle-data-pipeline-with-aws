@@ -9,7 +9,8 @@ from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_DOWNLOADING_URL,
     CRICSHEET_DATA_S3_FOLDER_NAME,
     CRICSHEET_DATA_S3_FOLDER_TO_STORE_NEW_JSON_FILES_ZIP,
-    CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP
+    CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP,
+    CRICSHEET_DATA_S3_FOLDER_TO_STORE_UNPROCESSED_JSON_FILES_ZIP
 )
 
 # Setup logging
@@ -26,14 +27,20 @@ class DownloadDataFromCricsheetHandler:
 
     def __init__(self) -> None:
         self._cricsheet_url = CRICSHEET_DATA_DOWNLOADING_URL
+        self._sns_topic_arn = os.getenv("SNS_TOPIC_ARN")
         self._s3_bucket_name = os.getenv("DOWNLOAD_BUCKET_NAME")
+        self._sns_client = boto3.client("sns")
         self._s3_client = boto3.client("s3")
         self._temp_folder: str = "/tmp"
         self._extraction_directory: str = f"{self._temp_folder}/extracted_files"
         self._s3_folder_to_store_cricsheet_data: str = CRICSHEET_DATA_S3_FOLDER_NAME
         self._s3_folder_to_store_new_json_files_zip: str = CRICSHEET_DATA_S3_FOLDER_TO_STORE_NEW_JSON_FILES_ZIP
         self._s3_folder_to_store_processed_json_files_zip: str = CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP
+        self._s3_folder_to_store_unprocessed_json_files_zip: str = CRICSHEET_DATA_S3_FOLDER_TO_STORE_UNPROCESSED_JSON_FILES_ZIP
 
+        if not self._sns_topic_arn:
+            logger.error("Environment variable 'SNS_TOPIC_ARN' is missing.")
+            raise ValueError("Missing required environment variable: 'SNS_TOPIC_ARN'")
         if not self._s3_bucket_name:
             logger.error("Environment variable 'DOWNLOAD_BUCKET_NAME' is missing.")
             raise ValueError("Missing required environment variable: 'DOWNLOAD_BUCKET_NAME'")
@@ -71,7 +78,8 @@ class DownloadDataFromCricsheetHandler:
             raise
 
         new_files = self._seggregate_new_files_from_downloaded_zip()
-        self._zip_new_files_and_upload_to_s3(new_files=new_files)
+        # self._zip_new_files_and_upload_to_s3(new_files=new_files)
+        self._upload_new_json_files_to_s3_and_send_sns_notification(new_files=new_files)
 
 
     def _list_all_the_available_items_in_processed_folder(self) -> Set:
@@ -100,6 +108,24 @@ class DownloadDataFromCricsheetHandler:
                         new_files.append(file)
         logger.info(f"Newly downloaded files: {new_files}")
         return new_files
+
+    def _send_sns_notification_with_json_file_key(self, json_file_key: str):
+        s3_file_location = f"s3://{self._s3_bucket_name}/{json_file_key}"
+        logger.info(f"Sending SNS notification with s3_file_location : {s3_file_location}")
+        sns_response = self._sns_client.publish(
+            Subject="New Cricsheet Data JSON File",
+            Message=s3_file_location,
+            TopicArn=self._sns_topic_arn,
+        )
+        logger.info(f"SNS response: {sns_response}")
+
+    def _upload_new_json_files_to_s3_and_send_sns_notification(self, new_files: List):
+        for file in new_files[:2]:
+            file_path = f"{self._extraction_directory}/{file}"
+            key = f"{self._s3_folder_to_store_cricsheet_data}/{self._s3_folder_to_store_unprocessed_json_files_zip}/{file}"
+            self._s3_client.upload_file(Bucket=self._s3_bucket_name, Key=key, Filename=file_path)
+            logger.info(f"File {file} uploaded to {key}")
+            self._send_sns_notification_with_json_file_key(key)
 
     def _zip_new_files_and_upload_to_s3(self, new_files: List):
         new_zip_file_name = "unprocessed_files.zip"

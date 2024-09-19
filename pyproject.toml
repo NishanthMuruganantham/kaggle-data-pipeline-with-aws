@@ -12,5 +12,5 @@ disable = [
     "missing-function-docstring",
     "missing-module-docstring",
 ]
-max-attributes = 10
+max-attributes = 15
 max-line-length = 160
