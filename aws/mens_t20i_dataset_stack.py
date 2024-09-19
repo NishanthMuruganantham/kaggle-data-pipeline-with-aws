@@ -3,6 +3,7 @@ from aws_cdk import (
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_sns as sns,
+    aws_sns_subscriptions as sns_subscription,
     aws_sqs as sqs,
     aws_s3 as s3,
     aws_s3_notifications as s3_notification,
@@ -48,6 +49,7 @@ class MenT20IDatasetStack(Stack):
             queue_name="cricsheet_deliverywise_data_extraction_dlq",
             retention_period=Duration.days(14),
         )
+        # DLQ for the matchwise data extraction from the JSON files
         cricsheet_matchwise_data_extraction_dlq = sqs.Queue(
             self,
             "cricsheet_matchwise_data_extraction_dlq",
@@ -67,6 +69,9 @@ class MenT20IDatasetStack(Stack):
                 queue=cricsheet_deliverywise_data_extraction_dlq,
             ),
         )
+        cricsheet_json_data_extraction_sns_topic.add_subscription(
+            sns_subscription.SqsSubscription(cricsheet_deliverywise_data_extraction_sqs_queue)
+        )
         # SQS Topic for the matchwise data extraction from the JSON files
         cricsheet_matchwise_data_extraction_sqs_queue = sqs.Queue(
             self,
@@ -77,6 +82,9 @@ class MenT20IDatasetStack(Stack):
                 max_receive_count=2,
                 queue=cricsheet_matchwise_data_extraction_dlq,
             ),
+        )
+        cricsheet_json_data_extraction_sns_topic.add_subscription(
+            sns_subscription.SqsSubscription(cricsheet_matchwise_data_extraction_sqs_queue)
         )
 
         # Lambda layer containing the necessary code and packages
@@ -99,6 +107,7 @@ class MenT20IDatasetStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+                "SNS_TOPIC_ARN": cricsheet_json_data_extraction_sns_topic.topic_arn,
             },
             function_name="cricsheet-data-downloading-lambda",
             layers=[
@@ -117,6 +126,12 @@ class MenT20IDatasetStack(Stack):
                     "logs:PutLogEvents",
                 ],
                 resources=["*"],
+            )
+        )
+        cricsheet_data_downloading_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["sns:Publish"],
+                resources=[cricsheet_json_data_extraction_sns_topic.topic_arn],
             )
         )
 
