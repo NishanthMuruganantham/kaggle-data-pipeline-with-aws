@@ -1,15 +1,14 @@
 from aws_cdk import (
-    aws_dynamodb as dynamodb,
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_sns as sns,
     aws_sns_subscriptions as sns_subscription,
     aws_sqs as sqs,
     aws_s3 as s3,
-    aws_s3_notifications as s3_notification,
     Duration,
     Stack,
     RemovalPolicy,
+    aws_lambda_event_sources
 )
 from constructs import Construct
 from constants import AWS_SDK_PANDAS_LAYER_ARN
@@ -98,6 +97,8 @@ class MenT20IDatasetStack(Stack):
         # Pandas layer by AWS
         pandas_layer = _lambda.LayerVersion.from_layer_version_arn(self, "PandasLayer", AWS_SDK_PANDAS_LAYER_ARN)
 
+        ##################### LAMBDA CONFIGURATIONS #######################################################
+
         # Lambda function for downloading data from Cricsheet
         cricsheet_data_downloading_lambda = _lambda.Function(
             self,
@@ -165,10 +166,6 @@ class MenT20IDatasetStack(Stack):
                 resources=["*"],
             )
         )
-
-        # S3 event notification to trigger the processing lambda
-        cricsheet_data_downloading_bucket.add_event_notification(
-            s3.EventType.OBJECT_CREATED,
-            s3_notification.LambdaDestination(cricsheet_deliverywise_data_extraction_lambda),
-            s3.NotificationKeyFilter(prefix="cricsheet_data/new_cricsheet_data/", suffix=".zip")
+        cricsheet_deliverywise_data_extraction_lambda.add_event_source(
+            aws_lambda_event_sources.SqsEventSource(cricsheet_deliverywise_data_extraction_sqs_queue)
         )
