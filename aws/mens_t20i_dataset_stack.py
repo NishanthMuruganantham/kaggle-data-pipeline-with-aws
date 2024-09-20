@@ -1,11 +1,14 @@
 from aws_cdk import (
     aws_iam as iam,
     aws_lambda as _lambda,
+    aws_sns as sns,
+    aws_sns_subscriptions as sns_subscription,
+    aws_sqs as sqs,
     aws_s3 as s3,
-    aws_s3_notifications as s3_notification,
     Duration,
     Stack,
     RemovalPolicy,
+    aws_lambda_event_sources
 )
 from constructs import Construct
 from constants import AWS_SDK_PANDAS_LAYER_ARN
@@ -29,6 +32,60 @@ class MenT20IDatasetStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
+        ##################  SNS Configurations ##########
+        # SNS Topic from which the SQS queues get the data
+        cricsheet_json_data_extraction_sns_topic = sns.Topic(
+            self,
+            "cricsheet_json_data_extraction_sns_topic",
+            topic_name="cricsheet_json_data_extraction_sns_topic",
+        )
+
+        ################# DLQ Configurations #############
+        # DLQ for the deliverywise data extraction from the JSON files
+        cricsheet_deliverywise_data_extraction_dlq = sqs.Queue(
+            self,
+            "cricsheet_deliverywise_data_extraction_dlq",
+            queue_name="cricsheet_deliverywise_data_extraction_dlq",
+            retention_period=Duration.days(14),
+        )
+        # DLQ for the matchwise data extraction from the JSON files
+        cricsheet_matchwise_data_extraction_dlq = sqs.Queue(
+            self,
+            "cricsheet_matchwise_data_extraction_dlq",
+            queue_name="cricsheet_matchwise_data_extraction_dlq",
+            retention_period=Duration.days(14),
+        )
+
+        ################# SQS Configurations #############
+        # SQS Topic for the deliverywise data extraction from the JSON files
+        cricsheet_deliverywise_data_extraction_sqs_queue = sqs.Queue(
+            self,
+            "cricsheet_deliverywise_data_extraction_sqs_queue",
+            queue_name="cricsheet_deliverywise_data_extraction_sqs_queue",
+            visibility_timeout=Duration.minutes(10),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=2,
+                queue=cricsheet_deliverywise_data_extraction_dlq,
+            ),
+        )
+        cricsheet_json_data_extraction_sns_topic.add_subscription(
+            sns_subscription.SqsSubscription(cricsheet_deliverywise_data_extraction_sqs_queue)
+        )
+        # SQS Topic for the matchwise data extraction from the JSON files
+        cricsheet_matchwise_data_extraction_sqs_queue = sqs.Queue(
+            self,
+            "cricsheet_matchwise_data_extraction_sqs_queue",
+            queue_name="cricsheet_matchwise_data_extraction_sqs_queue",
+            visibility_timeout=Duration.minutes(10),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                max_receive_count=2,
+                queue=cricsheet_matchwise_data_extraction_dlq,
+            ),
+        )
+        cricsheet_json_data_extraction_sns_topic.add_subscription(
+            sns_subscription.SqsSubscription(cricsheet_matchwise_data_extraction_sqs_queue)
+        )
+
         # Lambda layer containing the necessary code and packages
         package_layer = _lambda.LayerVersion(
             self,
@@ -40,6 +97,8 @@ class MenT20IDatasetStack(Stack):
         # Pandas layer by AWS
         pandas_layer = _lambda.LayerVersion.from_layer_version_arn(self, "PandasLayer", AWS_SDK_PANDAS_LAYER_ARN)
 
+        ##################### LAMBDA CONFIGURATIONS #######################################################
+
         # Lambda function for downloading data from Cricsheet
         cricsheet_data_downloading_lambda = _lambda.Function(
             self,
@@ -49,6 +108,7 @@ class MenT20IDatasetStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+                "SNS_TOPIC_ARN": cricsheet_json_data_extraction_sns_topic.topic_arn,
             },
             function_name="cricsheet-data-downloading-lambda",
             layers=[
@@ -67,6 +127,12 @@ class MenT20IDatasetStack(Stack):
                     "logs:PutLogEvents",
                 ],
                 resources=["*"],
+            )
+        )
+        cricsheet_data_downloading_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=["sns:Publish"],
+                resources=[cricsheet_json_data_extraction_sns_topic.topic_arn],
             )
         )
 
@@ -101,10 +167,6 @@ class MenT20IDatasetStack(Stack):
                 resources=["*"],
             )
         )
-
-        # S3 event notification to trigger the processing lambda
-        cricsheet_data_downloading_bucket.add_event_notification(
-            s3.EventType.OBJECT_CREATED,
-            s3_notification.LambdaDestination(cricsheet_deliverywise_data_extraction_lambda),
-            s3.NotificationKeyFilter(prefix="cricsheet_data/new_cricsheet_data/", suffix=".zip")
+        cricsheet_deliverywise_data_extraction_lambda.add_event_source(
+            aws_lambda_event_sources.SqsEventSource(cricsheet_deliverywise_data_extraction_sqs_queue)
         )
