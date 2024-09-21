@@ -14,3 +14,4 @@ disable = [
 ]
 max-attributes = 15
 max-line-length = 160
+min-public-methods = 1

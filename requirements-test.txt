@@ -2,3 +2,4 @@ boto3==1.34.161
 pylint==3.2.6
 pyright==1.1.377
 pytest==6.2.5
+vulture==2.12

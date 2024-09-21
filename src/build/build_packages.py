@@ -45,7 +45,7 @@ from build.constants import (
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def build_packages():
+def build_packages():   # noqa: Vulture
     """Builds the packages for the AWS Lambda layer."""
     logging.info("Starting package build process...")
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
