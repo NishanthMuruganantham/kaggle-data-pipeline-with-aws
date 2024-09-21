@@ -1,4 +1,5 @@
 from aws_cdk import (
+    aws_dynamodb as dynamodb,
     aws_iam as iam,
     aws_lambda as _lambda,
     aws_sns as sns,
@@ -32,7 +33,22 @@ class MenT20IDatasetStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
         )
 
-        ##################  SNS Configurations ##########
+        ######################################## DYNAMODB CONFIGURATIONS ################################################
+        dynamo_db_for_storing_deliverywise_data = dynamodb.Table(
+            self,
+            "dynamo_db_for_storing_deliverywise_dara",
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            partition_key=dynamodb.Attribute(
+                name="composite_delivery_key", type=dynamodb.AttributeType.STRING
+            ),
+            removal_policy=RemovalPolicy.DESTROY,
+            sort_key=dynamodb.Attribute(
+                name="ball_number", type=dynamodb.AttributeType.STRING
+            ),
+            table_name="dynamo_db_for_storing_deliverywise_dara",
+        )
+
+        ########################################  SNS Configurations #####################################################
         # SNS Topic from which the SQS queues get the data
         cricsheet_json_data_extraction_sns_topic = sns.Topic(
             self,
@@ -40,7 +56,7 @@ class MenT20IDatasetStack(Stack):
             topic_name="cricsheet_json_data_extraction_sns_topic",
         )
 
-        ################# DLQ Configurations #############
+        ######################################## DLQ Configurations ######################################################
         # DLQ for the deliverywise data extraction from the JSON files
         cricsheet_deliverywise_data_extraction_dlq = sqs.Queue(
             self,
@@ -56,7 +72,7 @@ class MenT20IDatasetStack(Stack):
             retention_period=Duration.days(14),
         )
 
-        ################# SQS Configurations #############
+        ########################################### SQS Configurations ###################################################
         # SQS Topic for the deliverywise data extraction from the JSON files
         cricsheet_deliverywise_data_extraction_sqs_queue = sqs.Queue(
             self,
@@ -97,7 +113,7 @@ class MenT20IDatasetStack(Stack):
         # Pandas layer by AWS
         pandas_layer = _lambda.LayerVersion.from_layer_version_arn(self, "PandasLayer", AWS_SDK_PANDAS_LAYER_ARN)
 
-        ##################### LAMBDA CONFIGURATIONS #######################################################
+        ########################################### LAMBDA CONFIGURATIONS #######################################################
 
         # Lambda function for downloading data from Cricsheet
         cricsheet_data_downloading_lambda = _lambda.Function(
@@ -155,6 +171,8 @@ class MenT20IDatasetStack(Stack):
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_deliverywise_data_extraction_lambda)
+        # Permissions for lambda functions to the DynamoDB table
+        dynamo_db_for_storing_deliverywise_data.grant_read_write_data(cricsheet_deliverywise_data_extraction_lambda)
         # Policy for CloudWatch logging
         cricsheet_deliverywise_data_extraction_lambda.add_to_role_policy(
             iam.PolicyStatement(
