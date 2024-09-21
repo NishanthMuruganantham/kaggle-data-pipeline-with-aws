@@ -36,16 +36,18 @@ class MenT20IDatasetStack(Stack):
         ######################################## DYNAMODB CONFIGURATIONS ################################################
         dynamo_db_for_storing_deliverywise_data = dynamodb.Table(
             self,
-            "dynamo_db_for_storing_deliverywise_dara",
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            "dynamo_db_for_storing_deliverywise_data",
+            table_name="dynamo_db_for_storing_deliverywise_data",
             partition_key=dynamodb.Attribute(
-                name="composite_delivery_key", type=dynamodb.AttributeType.STRING
+                name="composite_delivery_key",
+                type=dynamodb.AttributeType.STRING,
+            ),
+            sort_key=dynamodb.Attribute(
+                name="match_id",
+                type=dynamodb.AttributeType.NUMBER,
             ),
             removal_policy=RemovalPolicy.DESTROY,
-            sort_key=dynamodb.Attribute(
-                name="ball_number", type=dynamodb.AttributeType.STRING
-            ),
-            table_name="dynamo_db_for_storing_deliverywise_dara",
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
         )
 
         ########################################  SNS Configurations #####################################################
@@ -160,6 +162,7 @@ class MenT20IDatasetStack(Stack):
             handler="extract_deliverywise_cricsheet_data_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
+                "DYNAMODB_TO_STORE_DELIVERYWISE_DATA": dynamo_db_for_storing_deliverywise_data.table_name,
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
             },
             function_name="cricsheet-deliverywise-data-extraction-lambda",
@@ -167,6 +170,7 @@ class MenT20IDatasetStack(Stack):
                 package_layer,
                 pandas_layer,
             ],
+            memory_size=300,
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket

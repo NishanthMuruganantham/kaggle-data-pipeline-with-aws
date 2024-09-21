@@ -12,7 +12,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                check_type: ['imports_check', 'pylint_check', 'pyright_check']
+                check_type: ['imports_check', 'pylint_check', 'pyright_check', "unused_code_check"]
         steps:
             - 
                 name: Checkout code
