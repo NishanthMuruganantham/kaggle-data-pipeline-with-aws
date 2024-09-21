@@ -5,7 +5,9 @@ from typing import Dict
 import awswrangler as wr
 import boto3
 import pandas as pd
-from mens_t20i_data_collector._lambdas.constants import DELIVERYWISE_DATAFRAME_COLUMNS
+from mens_t20i_data_collector._lambdas.constants import (
+    DELIVERYWISE_DATAFRAME_COLUMNS
+)
 
 # Set up logging
 logger = logging.getLogger()
