@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import zipfile
@@ -110,11 +111,16 @@ class DownloadDataFromCricsheetHandler:
         return new_files
 
     def _send_sns_notification_with_json_file_key(self, json_file_key: str):
-        s3_file_location = f"s3://{self._s3_bucket_name}/{json_file_key}"
-        logger.info(f"Sending SNS notification with s3_file_location : {s3_file_location}")
+        logger.info(f"Sending SNS notification with {json_file_key}")
+        json_message_body = {
+            "json_file_key": json_file_key,
+            "match_id": os.path.splitext(os.path.basename(json_file_key))[0]
+        }
         sns_response = self._sns_client.publish(
             Subject="New Cricsheet Data JSON File",
-            Message=s3_file_location,
+            Message=json.dumps(
+                json_message_body, indent=4, sort_keys=True, default=str
+            ),
             TopicArn=self._sns_topic_arn,
         )
         logger.info(f"SNS response: {sns_response}")
