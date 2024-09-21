@@ -11,14 +11,12 @@ from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_S3_FOLDER_NAME,
     CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP
 )
+from mens_t20i_data_collector._lambdas.utils import (
+    get_environmental_variable_value
+)
 
 # Setup logging
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-stream_handler.setFormatter(formatter)
 logger = logging.getLogger()
-logger.addHandler(stream_handler)
 logger.setLevel(logging.INFO)
 
 
@@ -26,21 +24,14 @@ class DownloadDataFromCricsheetHandler:
 
     def __init__(self) -> None:
         self._cricsheet_url = CRICSHEET_DATA_DOWNLOADING_URL
-        self._sns_topic_arn = os.getenv("SNS_TOPIC_ARN")
-        self._s3_bucket_name = os.getenv("DOWNLOAD_BUCKET_NAME")
+        self._sns_topic_arn = get_environmental_variable_value("SNS_TOPIC_ARN")
+        self._s3_bucket_name = get_environmental_variable_value("DOWNLOAD_BUCKET_NAME")
         self._sns_client = boto3.client("sns")
         self._s3_client = boto3.client("s3")
         self._temp_folder: str = "/tmp"
         self._extraction_directory: str = f"{self._temp_folder}/extracted_files"
         self._s3_folder_to_store_cricsheet_data: str = CRICSHEET_DATA_S3_FOLDER_NAME
         self._s3_folder_to_store_processed_json_files_zip: str = CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP
-
-        if not self._sns_topic_arn:
-            logger.error("Environment variable 'SNS_TOPIC_ARN' is missing.")
-            raise ValueError("Missing required environment variable: 'SNS_TOPIC_ARN'")
-        if not self._s3_bucket_name:
-            logger.error("Environment variable 'DOWNLOAD_BUCKET_NAME' is missing.")
-            raise ValueError("Missing required environment variable: 'DOWNLOAD_BUCKET_NAME'")
 
     def download_data_from_cricsheet(self) -> str:
         try:

@@ -1,12 +1,14 @@
 import json
 import logging
-import os
 from typing import Dict
 import awswrangler as wr
 import boto3
 import pandas as pd
 from mens_t20i_data_collector._lambdas.constants import (
     DELIVERYWISE_DATAFRAME_COLUMNS
+)
+from mens_t20i_data_collector._lambdas.utils import (
+    get_environmental_variable_value
 )
 
 # Set up logging
@@ -23,18 +25,10 @@ class DeliverywiseCricsheetDataExtractionHandler:
         :param match_id: Match ID for which delivery data needs to be extracted
         """
         self._match_id = match_id
-        self._s3_bucket_name = os.getenv("DOWNLOAD_BUCKET_NAME")
-        self._dynamo_db_table = os.getenv("DYNAMODB_TO_STORE_DELIVERYWISE_DATA", None)
+        self._s3_bucket_name = get_environmental_variable_value("DOWNLOAD_BUCKET_NAME")
+        self._dynamo_db_table = get_environmental_variable_value("DYNAMODB_TO_STORE_DELIVERYWISE_DATA")
         self._s3_client = boto3.client("s3")
         self._deliveries_dataframe: pd.DataFrame = pd.DataFrame(columns=DELIVERYWISE_DATAFRAME_COLUMNS) # type: ignore
-
-        if not self._s3_bucket_name:
-            logger.error("Environment variable 'DOWNLOAD_BUCKET_NAME' is missing.")
-            raise ValueError("Missing required environment variable: 'DOWNLOAD_BUCKET_NAME'")
-
-        if not self._dynamo_db_table:
-            logger.error("Environment variable 'DYNAMODB_TO_STORE_DELIVERYWISE_DATA' is missing.")
-            raise ValueError("Missing required environment variable: 'DYNAMODB_TO_STORE_DELIVERYWISE_DATA'")
 
     def extract_deliverywise_cricsheet_data(self, json_s3_file_key: str) -> None:
         """
@@ -196,7 +190,7 @@ def handler(event, __):     # noqa: Vulture
         json_file_s3_key_to_be_processed = json.loads(sns_message_body)["Message"]
         message_body = json.loads(json_file_s3_key_to_be_processed)
         json_file_key = message_body["json_file_key"]
-        match_id = message_body["match_id"]
+        match_id = int(message_body["match_id"])
         logger.info(f"JSON file key to be processed: {json_file_key}")
         logger.info(f"Match ID: {match_id}")
         extractor = DeliverywiseCricsheetDataExtractionHandler(match_id)
