@@ -36,7 +36,7 @@ class DatasetPreparationHandler:
         logger.info(f"Fetching data from DynamoDB table '{table_name}'.")
 
         try:
-            table = self._dynamodb_resource.Table(table_name)
+            table = self._dynamodb_resource.Table(table_name)   # type: ignore
             response = table.scan()
             data = response.get('Items', [])
             while 'LastEvaluatedKey' in response:
@@ -57,7 +57,7 @@ class DatasetPreparationHandler:
         try:
             csv_buffer = io.StringIO()
             dataframe.to_csv(csv_buffer, index=False)
-            self._s3_resource.Object(self._s3_bucket_name, f"{CRICSHEET_DATA_S3_OUTPUT_FOLDER}/{filename}").put(
+            self._s3_resource.Object(self._s3_bucket_name, f"{CRICSHEET_DATA_S3_OUTPUT_FOLDER}/{filename}").put(    # type: ignore
                 Body=csv_buffer.getvalue()
             )
             logger.info(f"CSV file '{filename}' uploaded to S3 successfully.")
