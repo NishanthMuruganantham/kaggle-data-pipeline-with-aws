@@ -191,3 +191,38 @@ class MenT20IDatasetStack(Stack):
         cricsheet_deliverywise_data_extraction_lambda.add_event_source(
             aws_lambda_event_sources.SqsEventSource(cricsheet_deliverywise_data_extraction_sqs_queue)
         )
+
+        # Lambda function to convert the stored data in DynamoDB table to CSV and store in S3
+        convert_dynamodb_data_to_csv_lambda = _lambda.Function(
+            self,
+            "convert_dynamodb_data_to_csv_lambda",
+            code=_lambda.Code.from_asset("output/convert_dynamo_db_data_to_csv_lambda.zip"),
+            handler="convert_dynamo_db_data_to_csv_lambda.handler",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            environment={
+                "DYNAMODB_TO_STORE_DELIVERYWISE_DATA": dynamo_db_for_storing_deliverywise_data.table_name,
+                "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+            },
+            function_name="convert-dynamodb-data-to-csv-lambda",
+            layers=[
+                package_layer,
+                pandas_layer,
+            ],
+            memory_size=300,
+            timeout=Duration.minutes(10),
+        )
+        # Permissions for lambda functions to the S3 bucket
+        cricsheet_data_downloading_bucket.grant_read_write(convert_dynamodb_data_to_csv_lambda)
+        # Permissions for lambda functions to the DynamoDB table
+        dynamo_db_for_storing_deliverywise_data.grant_read_data(convert_dynamodb_data_to_csv_lambda)
+        # Policy for CloudWatch logging
+        convert_dynamodb_data_to_csv_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                ],
+                resources=["*"],
+            )
+        )
