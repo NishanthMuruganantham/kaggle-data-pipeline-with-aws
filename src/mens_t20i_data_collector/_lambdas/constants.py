@@ -14,6 +14,8 @@ These constants are primarily used in the context of an AWS-based workflow that 
 CRICSHEET_DATA_DOWNLOADING_URL: str = "https://cricsheet.org/downloads/t20s_male_json.zip"
 CRICSHEET_DATA_S3_FOLDER_NAME: str = "cricsheet_data"
 CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP: str = "processed_data"
+CRICSHEET_DATA_S3_OUTPUT_FOLDER: str = "output"
+DELIVERYWISE_DATA_CSV_FILE_NAME: str = "deliverywise_data.csv"
 DELIVERYWISE_DATAFRAME_COLUMNS = [
         "match_id",
         "innings_number",
