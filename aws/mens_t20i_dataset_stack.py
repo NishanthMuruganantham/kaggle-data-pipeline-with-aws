@@ -49,6 +49,21 @@ class MenT20IDatasetStack(Stack):
             removal_policy=RemovalPolicy.DESTROY,
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
         )
+        dynamo_db_for_storing_matchwise_data = dynamodb.Table(
+            self,
+            "dynamo_db_for_storing_matchwise_data",
+            table_name="dynamo_db_for_storing_matchwise_data",
+            partition_key=dynamodb.Attribute(
+                name="index",
+                type=dynamodb.AttributeType.NUMBER,
+            ),
+            sort_key=dynamodb.Attribute(
+                name="match_id",
+                type=dynamodb.AttributeType.NUMBER,
+            ),
+            removal_policy=RemovalPolicy.DESTROY,
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+        )
 
         ########################################  SNS Configurations #####################################################
         # SNS Topic from which the SQS queues get the data
@@ -190,6 +205,44 @@ class MenT20IDatasetStack(Stack):
         )
         cricsheet_deliverywise_data_extraction_lambda.add_event_source(
             aws_lambda_event_sources.SqsEventSource(cricsheet_deliverywise_data_extraction_sqs_queue)
+        )
+
+        # Lambda function for extracting matchwise cricsheet data
+        cricsheet_matchwise_data_extraction_lambda = _lambda.Function(
+            self,
+            "cricsheet_matchwise_data_extraction_lambda",
+            code=_lambda.Code.from_asset("output/extract_matchwise_cricsheet_data_lambda_function.zip"),
+            handler="extract_matchwise_cricsheet_data_lambda_function.handler",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            environment={
+                "DYNAMODB_TO_STORE_MATCHWISE_DATA": dynamo_db_for_storing_matchwise_data.table_name,
+                "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+            },
+            function_name="cricsheet-matchwise-data-extraction-lambda",
+            layers=[
+                package_layer,
+                pandas_layer,
+            ],
+            memory_size=300,
+            timeout=Duration.minutes(10),
+        )
+        # Permissions for lambda functions to the S3 bucket
+        cricsheet_data_downloading_bucket.grant_read_write(cricsheet_matchwise_data_extraction_lambda)
+        # Permissions for lambda functions to the DynamoDB table
+        dynamo_db_for_storing_matchwise_data.grant_read_write_data(cricsheet_matchwise_data_extraction_lambda)
+        # Policy for CloudWatch logging
+        cricsheet_matchwise_data_extraction_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                ],
+                resources=["*"],
+            )
+        )
+        cricsheet_matchwise_data_extraction_lambda.add_event_source(
+            aws_lambda_event_sources.SqsEventSource(cricsheet_matchwise_data_extraction_sqs_queue)
         )
 
         # Lambda function to convert the stored data in DynamoDB table to CSV and store in S3

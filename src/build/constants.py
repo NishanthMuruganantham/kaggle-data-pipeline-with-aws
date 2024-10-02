@@ -11,6 +11,7 @@ LAMBDA_HANDLER_FILES = [
     'src/mens_t20i_data_collector/_lambdas/convert_dynamodb_data_to_csv/convert_dynamo_db_data_to_csv_lambda.py',
     'src/mens_t20i_data_collector/_lambdas/download_from_cricsheet/download_from_cricsheet_lambda_function.py',
     'src/mens_t20i_data_collector/_lambdas/extract_deliverywise_cricsheet_data/extract_deliverywise_cricsheet_data_lambda_function.py',
+    'src/mens_t20i_data_collector/_lambdas/extract_matchwise_cricsheet_data/extract_matchwise_cricsheet_data_lambda_function.py',
 ]
 PACKAGE_NAME = "mens_t20i_data_collector"
 PYTHON_VERSION = "3.11"
