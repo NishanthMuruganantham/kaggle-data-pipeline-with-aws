@@ -1,8 +1,8 @@
 import json
 import logging
 from typing import Dict
-import awswrangler as wr
 import boto3
+from pymongo import MongoClient
 import pandas as pd
 from mens_t20i_data_collector._lambdas.constants import (
     DELIVERYWISE_DATAFRAME_COLUMNS
@@ -26,7 +26,11 @@ class DeliverywiseCricsheetDataExtractionHandler:
         """
         self._match_id = match_id
         self._s3_bucket_name = get_environmental_variable_value("DOWNLOAD_BUCKET_NAME")
-        self._dynamo_db_table = get_environmental_variable_value("DYNAMODB_TO_STORE_DELIVERYWISE_DATA")
+        self._mongo_db_url = get_environmental_variable_value("MONGO_DB_URL")
+        self._mongo_db_name = get_environmental_variable_value("MONGO_DB_NAME")
+        self.collection_name = "mens_t20i_data_storage_collection"
+        self._mongo_db_client = MongoClient(self._mongo_db_url)
+        self._deliverywise_data_mongo_collection = self._mongo_db_client[self._mongo_db_name][self.collection_name]
         self._s3_client = boto3.client("s3")
         self._deliveries_dataframe: pd.DataFrame = pd.DataFrame(columns=DELIVERYWISE_DATAFRAME_COLUMNS) # type: ignore
 
@@ -42,7 +46,7 @@ class DeliverywiseCricsheetDataExtractionHandler:
             json_data = json.loads(bytes_buffer)
             self._get_delivery_data_of_given_match_id(json_data)
             self._correct_datatypes_and_create_composite_delivery_key_to_store_dataframe_in_dynamo_db()
-            self._store_dataframe_in_dynamo_db()
+            self._store_dataframe_in_mongodb()
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON format in the file: {e}")
             raise
@@ -61,16 +65,19 @@ class DeliverywiseCricsheetDataExtractionHandler:
         self._deliveries_dataframe["composite_delivery_key"] = self._deliveries_dataframe["composite_delivery_key"].astype(str)
         logger.info("Composite delivery key created successfully")
 
-    def _store_dataframe_in_dynamo_db(self) -> None:
+    def _store_dataframe_in_mongodb(self) -> None:
         """
-        Stores the deliveries dataframe in DynamoDB.
+        Stores the deliveries dataframe in MongoDB.
         """
-        logger.info(f"Storing {len(self._deliveries_dataframe)} records in DynamoDB...")
+        logger.info(f"Storing {len(self._deliveries_dataframe)} records in MongoDB...")
         try:
-            wr.dynamodb.put_df(df=self._deliveries_dataframe, table_name=self._dynamo_db_table, boto3_session=boto3.Session())  # type: ignore
-            logger.info("Data stored in DynamoDB successfully")
+            df_with_id = self._deliveries_dataframe.copy()
+            df_with_id['_id'] = df_with_id['composite_delivery_key']
+            records = df_with_id.to_dict("records")
+            self._deliverywise_data_mongo_collection.insert_many(records)
+            logger.info("Data stored in MongoDB successfully")
         except Exception as e:
-            logger.error(f"Failed to store data in DynamoDB: {e}")
+            logger.error(f"Failed to store data in MongoDB: {e}")
             raise
 
     def _get_delivery_data_of_given_match_id(self, json_data: Dict) -> None:
@@ -190,7 +197,7 @@ def handler(event, __):     # noqa: Vulture
         json_file_s3_key_to_be_processed = json.loads(sns_message_body)["Message"]
         message_body = json.loads(json_file_s3_key_to_be_processed)
         json_file_key = message_body["json_file_key"]
-        match_id = int(message_body["match_id"])
+        match_id = message_body["match_id"]
         logger.info(f"JSON file key to be processed: {json_file_key}")
         logger.info(f"Match ID: {match_id}")
         extractor = DeliverywiseCricsheetDataExtractionHandler(match_id)
