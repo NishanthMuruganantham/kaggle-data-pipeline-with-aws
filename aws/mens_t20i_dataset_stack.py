@@ -177,7 +177,6 @@ class MenT20IDatasetStack(Stack):
             handler="extract_deliverywise_cricsheet_data_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
-                "DYNAMODB_TO_STORE_DELIVERYWISE_DATA": dynamo_db_for_storing_deliverywise_data.table_name,
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
             },
             function_name="cricsheet-deliverywise-data-extraction-lambda",
