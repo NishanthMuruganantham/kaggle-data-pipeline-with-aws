@@ -11,8 +11,10 @@ from aws_cdk import (
     RemovalPolicy,
     aws_lambda_event_sources
 )
+import boto3
 from constructs import Construct
 from constants import AWS_SDK_PANDAS_LAYER_ARN
+from utils import get_secret_from_secrets_manager
 
 
 class MenT20IDatasetStack(Stack):
@@ -25,6 +27,7 @@ class MenT20IDatasetStack(Stack):
         **kwargs
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
+        self._secret_manager_client = boto3.client("secretsmanager")
 
         # S3 bucket for downloading data from Cricsheet
         cricsheet_data_downloading_bucket = s3.Bucket(
@@ -178,6 +181,8 @@ class MenT20IDatasetStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+                "MONGO_DB_URL": get_secret_from_secrets_manager(self._secret_manager_client, "MONGO_DB_URL", "db_secret"),
+                "MONGO_DB_NAME": get_secret_from_secrets_manager(self._secret_manager_client, "MONGO_DB_NAME", "db_secret"),
             },
             function_name="cricsheet-deliverywise-data-extraction-lambda",
             layers=[
