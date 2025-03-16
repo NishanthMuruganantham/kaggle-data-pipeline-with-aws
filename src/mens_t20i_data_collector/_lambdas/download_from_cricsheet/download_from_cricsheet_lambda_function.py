@@ -112,7 +112,7 @@ class DownloadDataFromCricsheetHandler:
         logger.info(f"SNS response: {sns_response}")
 
     def _upload_new_json_files_to_s3_and_send_sns_notification(self, new_files: List):
-        for file in new_files[:2]:
+        for file in new_files:
             file_path = f"{self._extraction_directory}/{file}"
             key = f"{self._s3_folder_to_store_cricsheet_data}/{self._s3_folder_to_store_processed_json_files_zip}/{file}"
             self._s3_client.upload_file(Bucket=self._s3_bucket_name, Key=key, Filename=file_path)

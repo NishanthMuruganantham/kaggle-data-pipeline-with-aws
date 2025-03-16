@@ -3,6 +3,7 @@ Utility functions for AWS services.
 """
 import boto3
 import json
+from typing import Dict
 from constants import SSM_PARAMETER_PREFIX
 
 
@@ -22,7 +23,7 @@ def get_parameter_from_ssm(ssm_client: boto3.client, parameter_name: str) -> str
         return None
 
 
-def get_secret_from_secrets_manager(secrets_manager_client: boto3.client, secret_key: str, secret_name: str) -> str:
+def get_secret_from_secrets_manager(secrets_manager_client: boto3.client, secret_name: str) -> Dict:
     """
     Fetches the secret value from AWS Secrets Manager.
 
@@ -32,13 +33,12 @@ def get_secret_from_secrets_manager(secrets_manager_client: boto3.client, secret
     :return: Value of the secret    """
     try:
         response = secrets_manager_client.get_secret_value(SecretId=f"{SSM_PARAMETER_PREFIX}{secret_name}")
-        response = json.loads(response["SecretString"])
-        return response[secret_key]
+        return json.loads(response["SecretString"])
 
     except secrets_manager_client.exceptions.ResourceNotFoundException:
         print(f"Secret {secret_name} not found.")
-        return None
+        return {}
 
-    except KeyError:
-        print(f"Key {secret_key} not found in the secret.")
-        return None
+    except Exception as e:
+        print(f"Failed to fetch secrets: {e}")
+        return {}
