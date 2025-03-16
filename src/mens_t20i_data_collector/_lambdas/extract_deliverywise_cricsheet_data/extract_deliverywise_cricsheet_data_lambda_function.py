@@ -8,7 +8,9 @@ from mens_t20i_data_collector._lambdas.constants import (
     DELIVERYWISE_DATAFRAME_COLUMNS
 )
 from mens_t20i_data_collector._lambdas.utils import (
-    get_environmental_variable_value
+    exception_handler,
+    get_environmental_variable_value,
+    parse_sns_event_message
 )
 
 # Set up logging
@@ -28,7 +30,7 @@ class DeliverywiseCricsheetDataExtractionHandler:
         self._s3_bucket_name = get_environmental_variable_value("DOWNLOAD_BUCKET_NAME")
         self._mongo_db_url = get_environmental_variable_value("MONGO_DB_URL")
         self._mongo_db_name = get_environmental_variable_value("MONGO_DB_NAME")
-        self.collection_name = "mens_t20i_data_storage_collection"
+        self.collection_name = get_environmental_variable_value("DELIVERYWISE_DATA_COLLECTION_NAME")
         self._mongo_db_client = MongoClient(self._mongo_db_url)
         self._deliverywise_data_mongo_collection = self._mongo_db_client[self._mongo_db_name][self.collection_name]
         self._s3_client = boto3.client("s3")
@@ -189,26 +191,12 @@ class DeliverywiseCricsheetDataExtractionHandler:
         }
 
 
-
-def handler(event, __):     # noqa: Vulture
-    try:
-        logger.info(f"Received event: {event}")
-        sns_message_body = event["Records"][0]["body"]
-        json_file_s3_key_to_be_processed = json.loads(sns_message_body)["Message"]
-        message_body = json.loads(json_file_s3_key_to_be_processed)
-        json_file_key = message_body["json_file_key"]
-        match_id = message_body["match_id"]
-        logger.info(f"JSON file key to be processed: {json_file_key}")
-        logger.info(f"Match ID: {match_id}")
-        extractor = DeliverywiseCricsheetDataExtractionHandler(match_id)
-        extractor.extract_deliverywise_cricsheet_data(json_file_key)
-        return {
-            "statusCode": 200,
-            "body": "Data Processed successfully"
-        }
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error(f"Error occurred: {str(e)}", exc_info=True)
-        return {
-            "statusCode": 500,
-            "body": f"Internal Server Error: {str(e)}"
-        }
+@exception_handler      # noqa: Vulture
+@parse_sns_event_message
+def handler(json_file_key, match_id):
+    extractor = DeliverywiseCricsheetDataExtractionHandler(match_id)
+    extractor.extract_deliverywise_cricsheet_data(json_file_key)
+    return {
+        "statusCode": 200,
+        "body": "Data Processed successfully"
+    }

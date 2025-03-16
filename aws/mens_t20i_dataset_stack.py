@@ -68,6 +68,9 @@ class MenT20IDatasetStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
         )
 
+        ########################################  SECRET MANAGER Configurations ##########################################
+        __db_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "db_secret")
+
         ########################################  SNS Configurations #####################################################
         # SNS Topic from which the SQS queues get the data
         cricsheet_json_data_extraction_sns_topic = sns.Topic(
@@ -181,8 +184,7 @@ class MenT20IDatasetStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
-                "MONGO_DB_URL": get_secret_from_secrets_manager(self._secret_manager_client, "MONGO_DB_URL", "db_secret"),
-                "MONGO_DB_NAME": get_secret_from_secrets_manager(self._secret_manager_client, "MONGO_DB_NAME", "db_secret"),
+                **__db_secrets,
             },
             function_name="cricsheet-deliverywise-data-extraction-lambda",
             layers=[
@@ -219,8 +221,8 @@ class MenT20IDatasetStack(Stack):
             handler="extract_matchwise_cricsheet_data_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
-                "DYNAMODB_TO_STORE_MATCHWISE_DATA": dynamo_db_for_storing_matchwise_data.table_name,
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+                **__db_secrets,
             },
             function_name="cricsheet-matchwise-data-extraction-lambda",
             layers=[
