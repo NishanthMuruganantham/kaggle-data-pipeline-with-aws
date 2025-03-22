@@ -153,7 +153,7 @@ class MenT20IDatasetStack(Stack):
             layers=[
                 package_layer,
             ],
-            timeout=Duration.minutes(1),
+            timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_data_downloading_lambda)
@@ -251,18 +251,18 @@ class MenT20IDatasetStack(Stack):
             aws_lambda_event_sources.SqsEventSource(cricsheet_matchwise_data_extraction_sqs_queue)
         )
 
-        # Lambda function to convert the stored data in DynamoDB table to CSV and store in S3
-        convert_dynamodb_data_to_csv_lambda = _lambda.Function(
+        # Lambda function to convert the stored data in MongoDB table to CSV and store in S3
+        convert_mongodb_data_to_csv_lambda = _lambda.Function(
             self,
-            "convert_dynamodb_data_to_csv_lambda",
-            code=_lambda.Code.from_asset("output/convert_dynamo_db_data_to_csv_lambda.zip"),
-            handler="convert_dynamo_db_data_to_csv_lambda.handler",
+            "convert_mongodb_data_to_csv_lambda",
+            code=_lambda.Code.from_asset("output/convert_mongo_db_data_to_csv_lambda.zip"),
+            handler="convert_mongo_db_data_to_csv_lambda.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
-                "DYNAMODB_TO_STORE_DELIVERYWISE_DATA": dynamo_db_for_storing_deliverywise_data.table_name,
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+                **__db_secrets,
             },
-            function_name="convert-dynamodb-data-to-csv-lambda",
+            function_name="convert-mongo-data-to-csv-lambda",
             layers=[
                 package_layer,
                 pandas_layer,
@@ -271,11 +271,9 @@ class MenT20IDatasetStack(Stack):
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
-        cricsheet_data_downloading_bucket.grant_read_write(convert_dynamodb_data_to_csv_lambda)
-        # Permissions for lambda functions to the DynamoDB table
-        dynamo_db_for_storing_deliverywise_data.grant_read_data(convert_dynamodb_data_to_csv_lambda)
+        cricsheet_data_downloading_bucket.grant_read_write(convert_mongodb_data_to_csv_lambda)
         # Policy for CloudWatch logging
-        convert_dynamodb_data_to_csv_lambda.add_to_role_policy(
+        convert_mongodb_data_to_csv_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     "logs:CreateLogGroup",
