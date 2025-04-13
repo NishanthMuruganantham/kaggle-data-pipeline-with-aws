@@ -38,3 +38,4 @@ DELIVERYWISE_DATAFRAME_COLUMNS = [
         "dismissal_type",
         "fielder_name"
 ]
+MATCHWISE_DATA_CSV_FILE_NAME: str = "matchwise_data.csv"
