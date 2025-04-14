@@ -10,6 +10,7 @@ from mens_t20i_data_collector._lambdas.constants import (
 from mens_t20i_data_collector._lambdas.utils import (
     exception_handler,
     get_environmental_variable_value,
+    make_dynamodb_entry_for_file_data_extraction_status,
     parse_sns_event_message
 )
 
@@ -35,6 +36,10 @@ class DeliverywiseCricsheetDataExtractionHandler:
         self._deliverywise_data_mongo_collection = self._mongo_db_client[self._mongo_db_name][self.collection_name]
         self._s3_client = boto3.client("s3")
         self._deliveries_dataframe: pd.DataFrame = pd.DataFrame(columns=DELIVERYWISE_DATAFRAME_COLUMNS) # type: ignore
+        dynamodb_client = boto3.resource("dynamodb")
+        self._dynamo_db_to_store_file_data_extraction_status = dynamodb_client.Table(   # type: ignore
+            get_environmental_variable_value("DYNAMODB_TABLE_NAME")
+        )
 
     def extract_deliverywise_cricsheet_data(self, json_s3_file_key: str) -> None:
         """
@@ -49,6 +54,12 @@ class DeliverywiseCricsheetDataExtractionHandler:
             self._get_delivery_data_of_given_match_id(json_data)
             self._correct_datatypes_and_create_composite_delivery_key_to_store_dataframe_in_dynamo_db()
             self._store_dataframe_in_mongodb()
+            make_dynamodb_entry_for_file_data_extraction_status(
+                table=self._dynamo_db_to_store_file_data_extraction_status,
+                file_name=f"{self._match_id}.json",
+                field="deliverywise_data_extraction_status",
+                status=True
+            )
         except json.JSONDecodeError as e:
             logger.error(f"Invalid JSON format in the file: {e}")
             raise

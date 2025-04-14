@@ -6,6 +6,7 @@ from pymongo import MongoClient
 from mens_t20i_data_collector._lambdas.utils import (
     exception_handler,
     get_environmental_variable_value,
+    make_dynamodb_entry_for_file_data_extraction_status,
     parse_sns_event_message
 )
 
@@ -28,6 +29,10 @@ class MatchwiseCricsheetDataExtractionHandler:
         self._mongo_db_client = MongoClient(self._mongo_db_url)
         self._matchwise_data_mongo_collection = self._mongo_db_client[self._mongo_db_name][self._mongo_collection_name]
         self._s3_client = boto3.client("s3")
+        dynamodb_client = boto3.resource("dynamodb")
+        self._dynamo_db_to_store_file_data_extraction_status = dynamodb_client.Table(   # type: ignore
+            get_environmental_variable_value("DYNAMODB_TABLE_NAME")
+        )
 
     def extract_matchwise_cricsheet_data(self, json_s3_file_key: str) -> None:
         """
@@ -67,6 +72,12 @@ class MatchwiseCricsheetDataExtractionHandler:
             "player_of_the_match": info.get('player_of_match', [None])[0]
         }
         self._store_dataframe_in_mongodb(match_data)
+        make_dynamodb_entry_for_file_data_extraction_status(
+            table=self._dynamo_db_to_store_file_data_extraction_status,
+            file_name=f"{self._match_id}.json",
+            field="matchwise_data_extraction_status",
+            status=True
+        )
 
     def _store_dataframe_in_mongodb(self, match_data: Dict) -> None:
         """
