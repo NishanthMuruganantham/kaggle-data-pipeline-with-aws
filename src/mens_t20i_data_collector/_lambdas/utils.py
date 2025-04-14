@@ -3,6 +3,7 @@ import json
 import logging
 import os
 from typing import Any
+from botocore.exceptions import ClientError
 
 # Set up logging
 logger = logging.getLogger()
@@ -36,6 +37,24 @@ def get_environmental_variable_value(variable_name: str) -> Any:
         logger.error(f"Environmental variable {variable_name} is not set")
         raise ValueError(f"Environmental variable {variable_name} is not set")
     return value
+
+
+def make_dynamodb_entry_for_file_data_extraction_status(table, file_name: str, field: str, status: bool):
+    """
+    Creates a DynamoDB entry for file data extraction status.
+    """
+    try:
+        response = table.update_item(
+            Key={"file_name": file_name},
+            UpdateExpression=f"set {field} = :val",
+            ExpressionAttributeValues={":val": status},
+            ReturnValues="UPDATED_NEW"
+        )
+        logger.info(f"Updated DynamoDB entry: {response}")
+        return
+    except ClientError as e:
+        logger.error(f"Failed to update DynamoDB entry: {e.response['Error']['Message']}")
+        raise
 
 
 def parse_sns_event_message(function):

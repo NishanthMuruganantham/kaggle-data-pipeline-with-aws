@@ -37,35 +37,15 @@ class MenT20IDatasetStack(Stack):
         )
 
         ######################################## DYNAMODB CONFIGURATIONS ################################################
-        dynamo_db_for_storing_deliverywise_data = dynamodb.Table(
-            self,
-            "dynamo_db_for_storing_deliverywise_data",
-            table_name="dynamo_db_for_storing_deliverywise_data",
+        dynamodb_to_store_file_status_data = dynamodb.Table(
+            self, "json_file_data_extraction_status_table",
+            table_name="json_file_data_extraction_status_table",
             partition_key=dynamodb.Attribute(
-                name="composite_delivery_key",
-                type=dynamodb.AttributeType.STRING,
-            ),
-            sort_key=dynamodb.Attribute(
-                name="match_id",
-                type=dynamodb.AttributeType.NUMBER,
+                name="file_name",
+                type=dynamodb.AttributeType.STRING
             ),
             removal_policy=RemovalPolicy.DESTROY,
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
-        )
-        dynamo_db_for_storing_matchwise_data = dynamodb.Table(
-            self,
-            "dynamo_db_for_storing_matchwise_data",
-            table_name="dynamo_db_for_storing_matchwise_data",
-            partition_key=dynamodb.Attribute(
-                name="index",
-                type=dynamodb.AttributeType.NUMBER,
-            ),
-            sort_key=dynamodb.Attribute(
-                name="match_id",
-                type=dynamodb.AttributeType.NUMBER,
-            ),
-            removal_policy=RemovalPolicy.DESTROY,
-            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
         )
 
         ########################################  SECRET MANAGER Configurations ##########################################
@@ -148,6 +128,7 @@ class MenT20IDatasetStack(Stack):
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 "SNS_TOPIC_ARN": cricsheet_json_data_extraction_sns_topic.topic_arn,
+                "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
             },
             function_name="cricsheet-data-downloading-lambda",
             layers=[
@@ -157,6 +138,8 @@ class MenT20IDatasetStack(Stack):
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_data_downloading_lambda)
+        # Permissions for lambda functions to the DynamoDB table
+        dynamodb_to_store_file_status_data.grant_read_write_data(cricsheet_data_downloading_lambda)
         # Policy for CloudWatch logging
         cricsheet_data_downloading_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -185,6 +168,7 @@ class MenT20IDatasetStack(Stack):
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 **__db_secrets,
+                "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
             },
             function_name="cricsheet-deliverywise-data-extraction-lambda",
             layers=[
@@ -197,7 +181,7 @@ class MenT20IDatasetStack(Stack):
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_deliverywise_data_extraction_lambda)
         # Permissions for lambda functions to the DynamoDB table
-        dynamo_db_for_storing_deliverywise_data.grant_read_write_data(cricsheet_deliverywise_data_extraction_lambda)
+        dynamodb_to_store_file_status_data.grant_read_write_data(cricsheet_deliverywise_data_extraction_lambda)
         # Policy for CloudWatch logging
         cricsheet_deliverywise_data_extraction_lambda.add_to_role_policy(
             iam.PolicyStatement(
@@ -223,6 +207,7 @@ class MenT20IDatasetStack(Stack):
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 **__db_secrets,
+                "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
             },
             function_name="cricsheet-matchwise-data-extraction-lambda",
             layers=[
@@ -235,7 +220,7 @@ class MenT20IDatasetStack(Stack):
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_matchwise_data_extraction_lambda)
         # Permissions for lambda functions to the DynamoDB table
-        dynamo_db_for_storing_matchwise_data.grant_read_write_data(cricsheet_matchwise_data_extraction_lambda)
+        dynamodb_to_store_file_status_data.grant_read_write_data(cricsheet_matchwise_data_extraction_lambda)
         # Policy for CloudWatch logging
         cricsheet_matchwise_data_extraction_lambda.add_to_role_policy(
             iam.PolicyStatement(
