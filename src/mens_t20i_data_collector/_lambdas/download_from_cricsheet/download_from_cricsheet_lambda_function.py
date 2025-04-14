@@ -5,7 +5,6 @@ import zipfile
 from typing import List, Set
 import boto3
 import requests
-from botocore.exceptions import BotoCoreError, ClientError
 from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_DOWNLOADING_URL,
     CRICSHEET_DATA_S3_FOLDER_NAME,
@@ -24,6 +23,10 @@ class DownloadDataFromCricsheetHandler:
 
     def __init__(self) -> None:
         self._cricsheet_url = CRICSHEET_DATA_DOWNLOADING_URL
+        dynamodb_client = boto3.resource("dynamodb")
+        self._dynamo_db_to_store_file_data_extraction_status = dynamodb_client.Table(   # type: ignore
+            get_environmental_variable_value("DYNAMODB_TABLE_NAME")
+        )
         self._sns_topic_arn = get_environmental_variable_value("SNS_TOPIC_ARN")
         self._s3_bucket_name = get_environmental_variable_value("DOWNLOAD_BUCKET_NAME")
         self._sns_client = boto3.client("sns")
@@ -68,26 +71,14 @@ class DownloadDataFromCricsheetHandler:
         new_files = self._seggregate_new_files_from_downloaded_zip()
         self._upload_new_json_files_to_s3_and_send_sns_notification(new_files=new_files)
 
-
-    def _list_all_the_available_items_in_processed_folder(self) -> Set:
-        processed_files_folder_path = f"{self._s3_folder_to_store_cricsheet_data}/{self._s3_folder_to_store_processed_json_files_zip}/"
-        try:
-            list_bucket_objects_response = self._s3_client.list_objects_v2(
-                Bucket=self._s3_bucket_name,
-                Prefix=processed_files_folder_path
-            )
-            if "Contents" in list_bucket_objects_response:
-                return set(os.path.basename(obj["Key"]) for obj in list_bucket_objects_response["Contents"] if obj["Key"].endswith(".json"))
-            return set()
-        except (BotoCoreError, ClientError) as e:
-            logger.error(f"Failed to get the list of processed files from {processed_files_folder_path}: {e}")
-            raise
+    def _list_all_files_from_dynamo_db(self) -> Set:
+        response = self._dynamo_db_to_store_file_data_extraction_status.scan(ProjectionExpression="file_name")
+        return set(item["file_name"] for item in response["Items"])
 
     def _seggregate_new_files_from_downloaded_zip(self) -> List:
         new_files: List = []
-        processed_files: Set = self._list_all_the_available_items_in_processed_folder()
-        logger.info(f"Available processed files: {processed_files}")
-
+        processed_files = self._list_all_files_from_dynamo_db()
+        logger.info(f"Total available processed files = {len(processed_files)}")
         for _, _, files in os.walk(self._extraction_directory):
             for file in files:
                 if file.endswith(".json"):
@@ -112,7 +103,7 @@ class DownloadDataFromCricsheetHandler:
         logger.info(f"SNS response: {sns_response}")
 
     def _upload_new_json_files_to_s3_and_send_sns_notification(self, new_files: List):
-        for file in new_files:
+        for file in new_files[:5]:
             file_path = f"{self._extraction_directory}/{file}"
             key = f"{self._s3_folder_to_store_cricsheet_data}/{self._s3_folder_to_store_processed_json_files_zip}/{file}"
             self._s3_client.upload_file(Bucket=self._s3_bucket_name, Key=key, Filename=file_path)
