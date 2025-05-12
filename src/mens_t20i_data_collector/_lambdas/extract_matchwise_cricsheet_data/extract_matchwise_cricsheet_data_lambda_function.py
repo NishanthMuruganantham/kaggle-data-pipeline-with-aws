@@ -7,7 +7,7 @@ from mens_t20i_data_collector._lambdas.utils import (
     exception_handler,
     get_environmental_variable_value,
     make_dynamodb_entry_for_file_data_extraction_status,
-    parse_eventbridge_event_message,
+    parse_eventbridge_event_message
 )
 
 # Set up logging
