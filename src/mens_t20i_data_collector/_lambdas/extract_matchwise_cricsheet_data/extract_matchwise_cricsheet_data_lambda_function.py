@@ -7,7 +7,7 @@ from mens_t20i_data_collector._lambdas.utils import (
     exception_handler,
     get_environmental_variable_value,
     make_dynamodb_entry_for_file_data_extraction_status,
-    parse_sns_event_message
+    parse_eventbridge_event_message,
 )
 
 # Set up logging
@@ -94,7 +94,7 @@ class MatchwiseCricsheetDataExtractionHandler:
 
 
 @exception_handler      # noqa: Vulture
-@parse_sns_event_message
+@parse_eventbridge_event_message  # noqa: Vulture
 def handler(json_file_key, match_id):
     matchwise_cricsheet_data_extraction_handler = MatchwiseCricsheetDataExtractionHandler(match_id)
     matchwise_cricsheet_data_extraction_handler.extract_matchwise_cricsheet_data(json_file_key)

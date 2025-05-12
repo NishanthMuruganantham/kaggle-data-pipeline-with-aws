@@ -74,3 +74,19 @@ def parse_sns_event_message(function):
         return function(json_file_key, match_id)
 
     return wrapper
+
+def parse_eventbridge_event_message(function):
+    """
+    Decorator to parse the EventBridge event and passes the json_file_key and match_id to the decorated handler function.
+    """
+    @functools.wraps(function)
+    def wrapper(event, _):
+        logger.info(f"Received event: {event}")
+        s3_bucket_name = event["detail"]["bucket"]["name"]
+        json_file_key = event["detail"]["object"]["key"]
+        match_id = int(os.path.splitext(os.path.basename(json_file_key))[0])
+        logger.info(f"S3 bucket name: {s3_bucket_name}")
+        logger.info(f"JSON file key: {json_file_key}")
+        return function(json_file_key, match_id)
+
+    return wrapper
