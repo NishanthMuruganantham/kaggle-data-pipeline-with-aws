@@ -2,18 +2,16 @@ from aws_cdk import (
     aws_dynamodb as dynamodb,
     aws_iam as iam,
     aws_lambda as _lambda,
-    aws_sns as sns,
-    aws_sns_subscriptions as sns_subscription,
-    aws_sqs as sqs,
     aws_s3 as s3,
     Duration,
     Stack,
     RemovalPolicy,
-    aws_lambda_event_sources
+    aws_events as events,
+    aws_events_targets as events_targets,
 )
 import boto3
 from constructs import Construct
-from constants import AWS_SDK_PANDAS_LAYER_ARN
+from constants import AWS_SDK_PANDAS_LAYER_ARN, THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING
 from utils import get_secret_from_secrets_manager
 
 
@@ -34,6 +32,8 @@ class MenT20IDatasetStack(Stack):
             self,
             cricsheet_data_downloading_bucket_name,
             removal_policy=RemovalPolicy.DESTROY,
+            event_bridge_enabled=True,
+            # block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
         ######################################## DYNAMODB CONFIGURATIONS ################################################
@@ -50,60 +50,6 @@ class MenT20IDatasetStack(Stack):
 
         ########################################  SECRET MANAGER Configurations ##########################################
         __db_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "db_secret")
-
-        ########################################  SNS Configurations #####################################################
-        # SNS Topic from which the SQS queues get the data
-        cricsheet_json_data_extraction_sns_topic = sns.Topic(
-            self,
-            "cricsheet_json_data_extraction_sns_topic",
-            topic_name="cricsheet_json_data_extraction_sns_topic",
-        )
-
-        ######################################## DLQ Configurations ######################################################
-        # DLQ for the deliverywise data extraction from the JSON files
-        cricsheet_deliverywise_data_extraction_dlq = sqs.Queue(
-            self,
-            "cricsheet_deliverywise_data_extraction_dlq",
-            queue_name="cricsheet_deliverywise_data_extraction_dlq",
-            retention_period=Duration.days(14),
-        )
-        # DLQ for the matchwise data extraction from the JSON files
-        cricsheet_matchwise_data_extraction_dlq = sqs.Queue(
-            self,
-            "cricsheet_matchwise_data_extraction_dlq",
-            queue_name="cricsheet_matchwise_data_extraction_dlq",
-            retention_period=Duration.days(14),
-        )
-
-        ########################################### SQS Configurations ###################################################
-        # SQS Topic for the deliverywise data extraction from the JSON files
-        cricsheet_deliverywise_data_extraction_sqs_queue = sqs.Queue(
-            self,
-            "cricsheet_deliverywise_data_extraction_sqs_queue",
-            queue_name="cricsheet_deliverywise_data_extraction_sqs_queue",
-            visibility_timeout=Duration.minutes(10),
-            dead_letter_queue=sqs.DeadLetterQueue(
-                max_receive_count=2,
-                queue=cricsheet_deliverywise_data_extraction_dlq,
-            ),
-        )
-        cricsheet_json_data_extraction_sns_topic.add_subscription(
-            sns_subscription.SqsSubscription(cricsheet_deliverywise_data_extraction_sqs_queue)
-        )
-        # SQS Topic for the matchwise data extraction from the JSON files
-        cricsheet_matchwise_data_extraction_sqs_queue = sqs.Queue(
-            self,
-            "cricsheet_matchwise_data_extraction_sqs_queue",
-            queue_name="cricsheet_matchwise_data_extraction_sqs_queue",
-            visibility_timeout=Duration.minutes(10),
-            dead_letter_queue=sqs.DeadLetterQueue(
-                max_receive_count=2,
-                queue=cricsheet_matchwise_data_extraction_dlq,
-            ),
-        )
-        cricsheet_json_data_extraction_sns_topic.add_subscription(
-            sns_subscription.SqsSubscription(cricsheet_matchwise_data_extraction_sqs_queue)
-        )
 
         # Lambda layer containing the necessary code and packages
         package_layer = _lambda.LayerVersion(
@@ -127,8 +73,8 @@ class MenT20IDatasetStack(Stack):
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
-                "SNS_TOPIC_ARN": cricsheet_json_data_extraction_sns_topic.topic_arn,
                 "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
+                "THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING": THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING,
             },
             function_name="cricsheet-data-downloading-lambda",
             layers=[
@@ -149,12 +95,6 @@ class MenT20IDatasetStack(Stack):
                     "logs:PutLogEvents",
                 ],
                 resources=["*"],
-            )
-        )
-        cricsheet_data_downloading_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["sns:Publish"],
-                resources=[cricsheet_json_data_extraction_sns_topic.topic_arn],
             )
         )
 
@@ -193,8 +133,30 @@ class MenT20IDatasetStack(Stack):
                 resources=["*"],
             )
         )
-        cricsheet_deliverywise_data_extraction_lambda.add_event_source(
-            aws_lambda_event_sources.SqsEventSource(cricsheet_deliverywise_data_extraction_sqs_queue)
+        event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda = events.Rule(
+            self,
+            "event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda",
+            event_pattern=events.EventPattern(
+                source=["aws.s3"],
+                detail_type=["Object Created"],
+                detail={
+                    "bucket": {
+                        "name": [cricsheet_data_downloading_bucket.bucket_name]
+                    },
+                    "object": {
+                        "key": [{"prefix": "cricsheet_data/processed_data"}]
+                    }
+                },
+            ),
+        )
+        event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda.add_target(
+            events_targets.LambdaFunction(cricsheet_deliverywise_data_extraction_lambda)
+        )
+        cricsheet_deliverywise_data_extraction_lambda.add_permission(
+            "allow-s3-to-trigger-delivery-wise-data-extraction-lambda",
+            principal=iam.ServicePrincipal("s3.amazonaws.com"),
+            action="lambda:InvokeFunction",
+            source_arn=event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda.rule_arn,
         )
 
         # Lambda function for extracting matchwise cricsheet data
@@ -232,8 +194,30 @@ class MenT20IDatasetStack(Stack):
                 resources=["*"],
             )
         )
-        cricsheet_matchwise_data_extraction_lambda.add_event_source(
-            aws_lambda_event_sources.SqsEventSource(cricsheet_matchwise_data_extraction_sqs_queue)
+        event_bridge_rule_to_trigger_matchwise_data_extraction_lambda = events.Rule(
+            self,
+            "event_bridge_rule_to_trigger_matchwise_data_extraction_lambda",
+            event_pattern=events.EventPattern(
+                source=["aws.s3"],
+                detail_type=["Object Created"],
+                detail={
+                    "bucket": {
+                        "name": [cricsheet_data_downloading_bucket.bucket_name]
+                    },
+                    "object": {
+                        "key": [{"prefix": "cricsheet_data/processed_data"}]
+                    }
+                },
+            ),
+        )
+        event_bridge_rule_to_trigger_matchwise_data_extraction_lambda.add_target(
+            events_targets.LambdaFunction(cricsheet_matchwise_data_extraction_lambda)
+        )
+        cricsheet_matchwise_data_extraction_lambda.add_permission(
+            "allow-s3-to-trigger-match-wise-data-extraction-lambda",
+            principal=iam.ServicePrincipal("s3.amazonaws.com"),
+            action="lambda:InvokeFunction",
+            source_arn=event_bridge_rule_to_trigger_matchwise_data_extraction_lambda.rule_arn,
         )
 
         # Lambda function to convert the stored data in MongoDB table to CSV and store in S3

@@ -1,5 +1,4 @@
 import functools
-import json
 import logging
 import os
 from typing import Any
@@ -57,20 +56,18 @@ def make_dynamodb_entry_for_file_data_extraction_status(table, file_name: str, f
         raise
 
 
-def parse_sns_event_message(function):
+def parse_eventbridge_event_message(function):
     """
-    Decorator to parse the SNS event and passes the json_file_key and match_id to the decorated handler function.
+    Decorator to parse the EventBridge event and passes the json_file_key and match_id to the decorated handler function.
     """
     @functools.wraps(function)
     def wrapper(event, _):
         logger.info(f"Received event: {event}")
-        sns_message_body = event["Records"][0]["body"]
-        json_file_s3_key_to_be_processed = json.loads(sns_message_body)["Message"]
-        message_body = json.loads(json_file_s3_key_to_be_processed)
-        json_file_key = message_body["json_file_key"]
-        match_id = int(message_body["match_id"])
-        logger.info(f"JSON file key to be processed: {json_file_key}")
-        logger.info(f"Match ID: {match_id}")
+        s3_bucket_name = event["detail"]["bucket"]["name"]
+        json_file_key = event["detail"]["object"]["key"]
+        match_id = int(os.path.splitext(os.path.basename(json_file_key))[0])
+        logger.info(f"S3 bucket name: {s3_bucket_name}")
+        logger.info(f"JSON file key: {json_file_key}")
         return function(json_file_key, match_id)
 
     return wrapper

@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import zipfile
@@ -27,9 +26,10 @@ class DownloadDataFromCricsheetHandler:
         self._dynamo_db_to_store_file_data_extraction_status = dynamodb_client.Table(   # type: ignore
             get_environmental_variable_value("DYNAMODB_TABLE_NAME")
         )
-        self._sns_topic_arn = get_environmental_variable_value("SNS_TOPIC_ARN")
         self._s3_bucket_name = get_environmental_variable_value("DOWNLOAD_BUCKET_NAME")
-        self._sns_client = boto3.client("sns")
+        self._threshold_for_number_of_files_to_be_sent_for_processing = int(get_environmental_variable_value(
+            "THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING"
+        ))
         self._s3_client = boto3.client("s3")
         self._temp_folder: str = "/tmp"
         self._extraction_directory: str = f"{self._temp_folder}/extracted_files"
@@ -87,28 +87,12 @@ class DownloadDataFromCricsheetHandler:
         logger.info(f"Newly downloaded files: {new_files}")
         return new_files
 
-    def _send_sns_notification_with_json_file_key(self, json_file_key: str):
-        logger.info(f"Sending SNS notification with {json_file_key}")
-        json_message_body = {
-            "json_file_key": json_file_key,
-            "match_id": os.path.splitext(os.path.basename(json_file_key))[0]
-        }
-        sns_response = self._sns_client.publish(
-            Subject="New Cricsheet Data JSON File",
-            Message=json.dumps(
-                json_message_body, indent=4, sort_keys=True, default=str
-            ),
-            TopicArn=self._sns_topic_arn,
-        )
-        logger.info(f"SNS response: {sns_response}")
-
     def _upload_new_json_files_to_s3_and_send_sns_notification(self, new_files: List):
-        for file in new_files[:5]:
+        for file in new_files[:self._threshold_for_number_of_files_to_be_sent_for_processing]:
             file_path = f"{self._extraction_directory}/{file}"
             key = f"{self._s3_folder_to_store_cricsheet_data}/{self._s3_folder_to_store_processed_json_files_zip}/{file}"
             self._s3_client.upload_file(Bucket=self._s3_bucket_name, Key=key, Filename=file_path)
             logger.info(f"File {file} uploaded to {key}")
-            self._send_sns_notification_with_json_file_key(key)
 
 
 def handler(_, __):     # noqa: Vulture
