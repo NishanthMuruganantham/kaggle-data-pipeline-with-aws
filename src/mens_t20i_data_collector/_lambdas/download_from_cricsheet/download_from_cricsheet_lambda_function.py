@@ -30,7 +30,6 @@ class DownloadDataFromCricsheetHandler:
         self._threshold_for_number_of_files_to_be_sent_for_processing = int(get_environmental_variable_value(
             "THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING"
         ))
-        self._sns_client = boto3.client("sns")
         self._s3_client = boto3.client("s3")
         self._temp_folder: str = "/tmp"
         self._extraction_directory: str = f"{self._temp_folder}/extracted_files"
