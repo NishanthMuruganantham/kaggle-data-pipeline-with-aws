@@ -50,6 +50,9 @@ class MenT20IDatasetStack(Stack):
 
         ########################################  SECRET MANAGER Configurations ##########################################
         __db_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "db_secret")
+        __kaggle_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "kaggle_credentials")
+
+        ########################################  LAMBDA LAYER Configurations ##########################################
 
         # Lambda layer containing the necessary code and packages
         package_layer = _lambda.LayerVersion(
@@ -236,13 +239,45 @@ class MenT20IDatasetStack(Stack):
                 package_layer,
                 pandas_layer,
             ],
-            memory_size=300,
+            memory_size=1024,
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(convert_mongodb_data_to_csv_lambda)
         # Policy for CloudWatch logging
         convert_mongodb_data_to_csv_lambda.add_to_role_policy(
+            iam.PolicyStatement(
+                actions=[
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                ],
+                resources=["*"],
+            )
+        )
+
+        # Lambda function to upload the dataset to KAGGLE and create a new version of dataset
+        upload_dataset_to_kaggle_lambda = _lambda.Function(
+            self,
+            "upload_dataset_to_kaggle_lambda",
+            code=_lambda.Code.from_asset("output/upload_dataset_to_kaggle_lambda.zip"),
+            handler="upload_dataset_to_kaggle_lambda.handler",
+            runtime=_lambda.Runtime.PYTHON_3_11,
+            environment={
+                "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
+                **__kaggle_secrets,
+            },
+            function_name="upload-dataset-to-kaggle-lambda",
+            layers=[
+                package_layer,
+            ],
+            memory_size=300,
+            timeout=Duration.minutes(10),
+        )
+        # Permissions for lambda functions to the S3 bucket
+        cricsheet_data_downloading_bucket.grant_read(upload_dataset_to_kaggle_lambda)
+        # Policy for CloudWatch logging
+        upload_dataset_to_kaggle_lambda.add_to_role_policy(
             iam.PolicyStatement(
                 actions=[
                     "logs:CreateLogGroup",
