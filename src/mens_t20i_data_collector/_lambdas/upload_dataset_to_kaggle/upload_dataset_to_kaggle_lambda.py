@@ -47,7 +47,8 @@ class KaggleDatasetUploader:
         """
         try:
             logger.info("Authenticating to Kaggle and uploading dataset...")
-            from kaggle.api.kaggle_api_extended import KaggleApi         # pylint: disable=import-outside-toplevel
+            from kaggle.api.kaggle_api_extended import \
+                KaggleApi  # pylint: disable=import-outside-toplevel
             api = KaggleApi()
             api.authenticate()
             logger.info("Kaggle authentication successful")
