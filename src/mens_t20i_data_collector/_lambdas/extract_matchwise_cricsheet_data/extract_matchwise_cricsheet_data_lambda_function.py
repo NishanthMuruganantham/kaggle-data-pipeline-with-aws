@@ -83,8 +83,8 @@ class MatchwiseCricsheetDataExtractionHandler:
         """
         Stores the match dataframe in MongoDB.
         """
-        match_data['_id'] = match_data['index']
-        logger.info(f"Inserting match data for match {match_data['index']} in MongoDB...")
+        match_data['_id'] = match_data['match_id']
+        logger.info(f"Inserting match data for match {match_data['match_id']} in MongoDB...")
         try:
             self._matchwise_data_mongo_collection.insert_one(match_data)
             logger.info("Data stored in MongoDB successfully")

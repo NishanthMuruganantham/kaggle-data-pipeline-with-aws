@@ -8,6 +8,7 @@ from aws_cdk import (
     RemovalPolicy,
     aws_events as events,
     aws_events_targets as events_targets,
+    aws_s3_notifications as s3_notifications,
 )
 import boto3
 from constructs import Construct
@@ -38,8 +39,8 @@ class MenT20IDatasetStack(Stack):
 
         ######################################## DYNAMODB CONFIGURATIONS ################################################
         dynamodb_to_store_file_status_data = dynamodb.Table(
-            self, "json_file_data_extraction_status_table",
-            table_name="json_file_data_extraction_status_table",
+            self, "cricsheet_json_file_data_extraction_status_table",
+            table_name="cricsheet_json_file_data_extraction_status_table",
             partition_key=dynamodb.Attribute(
                 name="file_name",
                 type=dynamodb.AttributeType.STRING
@@ -270,12 +271,19 @@ class MenT20IDatasetStack(Stack):
             function_name="upload-dataset-to-kaggle-lambda",
             layers=[
                 package_layer,
+                pandas_layer,
             ],
             memory_size=300,
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read(upload_dataset_to_kaggle_lambda)
+        # S3 bucket notification for the upload_dataset_to_kaggle_lambda
+        cricsheet_data_downloading_bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            s3_notifications.LambdaDestination(upload_dataset_to_kaggle_lambda),
+            s3.NotificationKeyFilter(prefix="output/", suffix="deliverywise_data.csv"),
+        )
         # Policy for CloudWatch logging
         upload_dataset_to_kaggle_lambda.add_to_role_policy(
             iam.PolicyStatement(
