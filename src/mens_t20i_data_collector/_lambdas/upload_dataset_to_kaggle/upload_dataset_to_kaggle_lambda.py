@@ -3,6 +3,7 @@ import logging
 import os
 import tempfile
 import boto3
+import pandas as pd
 from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_S3_OUTPUT_FOLDER,
     DELIVERYWISE_DATA_CSV_FILE_NAME,
@@ -53,10 +54,14 @@ class KaggleDatasetUploader:
             api.authenticate()
             logger.info("Kaggle authentication successful")
             logger.info("Uploading dataset to Kaggle...")
+            last_match_details = self._get_last_match_details()
+            team_1 = last_match_details["team_1"]
+            team_2 = last_match_details["team_2"]
+            date = last_match_details["date"]
             api.dataset_create_version(
                 delete_old_versions=True,
                 folder=self._folder_to_keep_the_files_to_upload,
-                version_notes="Mens T20I Dataset",
+                version_notes=f"Dataset updated till the match between {team_1} and {team_2} on {date}",
             )
             logger.info("Dataset uploaded to Kaggle successfully")
         except Exception as e:
@@ -107,6 +112,18 @@ class KaggleDatasetUploader:
             os.path.join(self._folder_to_keep_the_files_to_upload, DELIVERYWISE_DATA_CSV_FILE_NAME)
         )
         logger.info("Dataset files downloaded from S3")
+
+    def _get_last_match_details(self):
+        """
+        Gets the last match details from the matchwise data.
+        """
+        logger.info("Getting last match details...")
+        matchwise_data = pd.read_csv(
+            os.path.join(self._folder_to_keep_the_files_to_upload, MATCHWISE_DATA_CSV_FILE_NAME)
+        )
+        last_match_details = matchwise_data.iloc[-1]
+        logger.info(f"Last match details: {last_match_details}")
+        return last_match_details.to_dict()
 
 
 @exception_handler      # noqa: Vulture

@@ -8,6 +8,7 @@ from aws_cdk import (
     RemovalPolicy,
     aws_events as events,
     aws_events_targets as events_targets,
+    aws_s3_notifications as s3_notifications,
 )
 import boto3
 from constructs import Construct
@@ -20,11 +21,11 @@ class MenT20IDatasetStack(Stack):
     def __init__(
         self,
         scope: Construct,
-        construct_id: str,
+        stack_name: str,
         cricsheet_data_downloading_bucket_name: str,
         **kwargs
     ) -> None:
-        super().__init__(scope, construct_id, **kwargs)
+        super().__init__(scope, stack_name, **kwargs)
         self._secret_manager_client = boto3.client("secretsmanager")
 
         # S3 bucket for downloading data from Cricsheet
@@ -38,8 +39,8 @@ class MenT20IDatasetStack(Stack):
 
         ######################################## DYNAMODB CONFIGURATIONS ################################################
         dynamodb_to_store_file_status_data = dynamodb.Table(
-            self, "json_file_data_extraction_status_table",
-            table_name="json_file_data_extraction_status_table",
+            self, f"{stack_name}-cricsheet_json_file_data_extraction_status_table",
+            table_name=f"{stack_name}-cricsheet_json_file_data_extraction_status_table",
             partition_key=dynamodb.Attribute(
                 name="file_name",
                 type=dynamodb.AttributeType.STRING
@@ -57,7 +58,7 @@ class MenT20IDatasetStack(Stack):
         # Lambda layer containing the necessary code and packages
         package_layer = _lambda.LayerVersion(
             self,
-            "MensT20IDataCollectorLayer",
+            f"{stack_name}-MensT20IDataCollectorLayer",
             code=_lambda.Code.from_asset("output/mens_t20i_data_collector.zip"),
             compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
             description="Layer containing the necessary code and packages for collecting men's T20I data",
@@ -270,12 +271,19 @@ class MenT20IDatasetStack(Stack):
             function_name="upload-dataset-to-kaggle-lambda",
             layers=[
                 package_layer,
+                pandas_layer,
             ],
             memory_size=300,
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read(upload_dataset_to_kaggle_lambda)
+        # S3 bucket notification for the upload_dataset_to_kaggle_lambda
+        cricsheet_data_downloading_bucket.add_event_notification(
+            s3.EventType.OBJECT_CREATED,
+            s3_notifications.LambdaDestination(upload_dataset_to_kaggle_lambda),
+            s3.NotificationKeyFilter(prefix="output/", suffix="deliverywise_data.csv"),
+        )
         # Policy for CloudWatch logging
         upload_dataset_to_kaggle_lambda.add_to_role_policy(
             iam.PolicyStatement(

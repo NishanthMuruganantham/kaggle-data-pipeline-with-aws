@@ -84,7 +84,7 @@ class DownloadDataFromCricsheetHandler:
                 if file.endswith(".json"):
                     if file not in processed_files:
                         new_files.append(file)
-        logger.info(f"Newly downloaded files: {new_files}")
+        logger.info(f"Total newly downloaded files: {len(new_files)}")
         return new_files
 
     def _upload_new_json_files_to_s3_and_send_sns_notification(self, new_files: List):
