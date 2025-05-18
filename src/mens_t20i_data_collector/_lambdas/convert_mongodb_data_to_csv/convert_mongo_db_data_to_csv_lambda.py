@@ -9,6 +9,7 @@ from mens_t20i_data_collector._lambdas.constants import (
     MATCHWISE_DATA_CSV_FILE_NAME
 )
 from mens_t20i_data_collector._lambdas.utils import (
+    exception_handler,
     get_environmental_variable_value
 )
 
@@ -39,8 +40,8 @@ class DatasetPreparationHandler:
         matchwise_dataframe: pd.DataFrame = pd.DataFrame(matchwise_data_cursor)
         matchwise_dataframe.drop(columns=["_id"], inplace=True)
         matchwise_dataframe.rename(columns={"index": "match_number"}, inplace=True)
-        # matchwise_dataframe["margin_runs"].astype(int)
-        matchwise_dataframe.sort_values(by=["match_number"], inplace=True)
+        matchwise_dataframe.sort_values(by=["date", "match_id"], inplace=True)
+        matchwise_dataframe["match_number"] = range(1, len(matchwise_dataframe) + 1)
         return matchwise_dataframe
 
     @property
@@ -73,18 +74,12 @@ class DatasetPreparationHandler:
             logger.error(f"Failed to upload '{filename}' to S3: {str(e)}", exc_info=True)
             raise
 
+
+@exception_handler  # noqa: Vulture
 def handler(_, __):     # noqa: Vulture
-    logger.info("Lambda function invoked.")
-    try:
-        dataset_preparation_handler = DatasetPreparationHandler()
-        dataset_preparation_handler.prepare_dataset()
-        return {
-            'statusCode': 200,
-            'body': 'Dataset successfully processed and uploaded.'
-        }
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        logger.error(f"Lambda function error: {str(e)}", exc_info=True)
-        return {
-            'statusCode': 500,
-            'body': f"Error processing dataset: {str(e)}"
-        }
+    """
+    Lambda function handler to convert MongoDB data to CSV and upload to S3.
+    """
+    dataset_preparation_handler = DatasetPreparationHandler()
+    dataset_preparation_handler.prepare_dataset()
+    return "Datasets prepared and uploaded successfully."
