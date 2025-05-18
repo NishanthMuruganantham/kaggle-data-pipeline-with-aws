@@ -7,7 +7,9 @@ from aws_cdk import (
     Stack,
     RemovalPolicy,
     aws_events as events,
+    aws_lambda_event_sources as lambda_event_sources,
     aws_events_targets as events_targets,
+    aws_sqs as sqs,
     aws_s3_notifications as s3_notifications,
 )
 import boto3
@@ -49,6 +51,14 @@ class MenT20IDatasetStack(Stack):
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST
         )
 
+        ########################################  SQS Configurations #####################################################
+        sqs_queue_to_send_delayed_message_when_new_file_is_downloaded = sqs.Queue(
+            self,
+            f"{stack_name}-sqs_queue_to_send_delayed_message_when_new_file_is_downloaded",
+            visibility_timeout=Duration.minutes(15),
+            delivery_delay=Duration.minutes(5),
+        )
+
         ########################################  SECRET MANAGER Configurations ##########################################
         __db_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "db_secret")
         __kaggle_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "kaggle_credentials")
@@ -76,6 +86,7 @@ class MenT20IDatasetStack(Stack):
             handler="download_from_cricsheet_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
             environment={
+                "DELAYED_SQS_QUEUE_URL": sqs_queue_to_send_delayed_message_when_new_file_is_downloaded.queue_url,
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
                 "THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING": THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING,
@@ -101,6 +112,8 @@ class MenT20IDatasetStack(Stack):
                 resources=["*"],
             )
         )
+        # Granting permissions to the Lambda function to send messages to the SQS queue
+        sqs_queue_to_send_delayed_message_when_new_file_is_downloaded.grant_send_messages(cricsheet_data_downloading_lambda)
         # EventBridge Rule to trigger the Lambda every Monday at 12:00 AM UTC
         event_bridge_rule_to_trigger_cricsheet_data_downloading_lambda = events.Rule(
             self,
@@ -268,6 +281,13 @@ class MenT20IDatasetStack(Stack):
                     "logs:PutLogEvents",
                 ],
                 resources=["*"],
+            )
+        )
+        # Trgerring the convert_mongodb_data_to_csv lambda function with delayed SQS message
+        convert_mongodb_data_to_csv_lambda.add_event_source(
+            lambda_event_sources.SqsEventSource(
+                sqs_queue_to_send_delayed_message_when_new_file_is_downloaded,
+                batch_size=1,
             )
         )
 

@@ -69,7 +69,9 @@ class DownloadDataFromCricsheetHandler:
             raise
 
         new_files = self._seggregate_new_files_from_downloaded_zip()
-        self._upload_new_json_files_to_s3_and_send_sns_notification(new_files=new_files)
+        self._upload_new_json_files_to_s3(new_files=new_files)
+        if new_files:
+            self._trigger_an_sqs_message_whenever_new_file_is_downloaded(new_files=new_files)
 
     def _list_all_files_from_dynamo_db(self) -> Set:
         response = self._dynamo_db_to_store_file_data_extraction_status.scan(ProjectionExpression="file_name")
@@ -87,7 +89,25 @@ class DownloadDataFromCricsheetHandler:
         logger.info(f"Total newly downloaded files: {len(new_files)}")
         return new_files
 
-    def _upload_new_json_files_to_s3_and_send_sns_notification(self, new_files: List):
+    def _trigger_an_sqs_message_whenever_new_file_is_downloaded(self, new_files: List[str]):
+        """
+        This function will trigger an SQS message whenever a new file is downloaded
+        :param new_files: List of new files downloaded
+        :return: None
+        """
+        sqs_client = boto3.client("sqs")
+        queue_url = get_environmental_variable_value("DELAYED_SQS_QUEUE_URL")
+        message_body = {
+            "message": "New files downloaded from Cricsheet",
+            "new_files": new_files,
+        }
+        response = sqs_client.send_message(
+            QueueUrl=queue_url,
+            MessageBody=str(message_body)
+        )
+        logger.info(f"Message sent to SQS: {response['MessageId']}")
+
+    def _upload_new_json_files_to_s3(self, new_files: List):
         for file in new_files[:self._threshold_for_number_of_files_to_be_sent_for_processing]:
             file_path = f"{self._extraction_directory}/{file}"
             key = f"{self._s3_folder_to_store_cricsheet_data}/{self._s3_folder_to_store_processed_json_files_zip}/{file}"
