@@ -34,7 +34,7 @@ class MenT20IDatasetStack(Stack):
             cricsheet_data_downloading_bucket_name,
             removal_policy=RemovalPolicy.DESTROY,
             event_bridge_enabled=True,
-            # block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
         ######################################## DYNAMODB CONFIGURATIONS ################################################
@@ -101,7 +101,21 @@ class MenT20IDatasetStack(Stack):
                 resources=["*"],
             )
         )
-
+        # EventBridge Rule to trigger the Lambda every Monday at 12:00 AM UTC
+        event_bridge_rule_to_trigger_cricsheet_data_downloading_lambda = events.Rule(
+            self,
+            "event_bridge_rule_to_trigger_cricsheet_data_downloading_lambda",
+            schedule=events.Schedule.cron(
+                minute="0",
+                hour="0",
+                month="*",
+                week_day="MON",
+                year="*",
+            ),
+            targets=[
+                events_targets.LambdaFunction(cricsheet_data_downloading_lambda)
+            ],
+        )
         # Lambda function for extracting deliverywise cricsheet data
         cricsheet_deliverywise_data_extraction_lambda = _lambda.Function(
             self,
@@ -120,7 +134,7 @@ class MenT20IDatasetStack(Stack):
                 pandas_layer,
             ],
             memory_size=300,
-            timeout=Duration.minutes(10),
+            timeout=Duration.minutes(1),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_deliverywise_data_extraction_lambda)
@@ -181,7 +195,7 @@ class MenT20IDatasetStack(Stack):
                 pandas_layer,
             ],
             memory_size=300,
-            timeout=Duration.minutes(10),
+            timeout=Duration.minutes(1),
         )
         # Permissions for lambda functions to the S3 bucket
         cricsheet_data_downloading_bucket.grant_read_write(cricsheet_matchwise_data_extraction_lambda)
@@ -240,7 +254,7 @@ class MenT20IDatasetStack(Stack):
                 package_layer,
                 pandas_layer,
             ],
-            memory_size=1024,
+            memory_size=3000,
             timeout=Duration.minutes(10),
         )
         # Permissions for lambda functions to the S3 bucket
