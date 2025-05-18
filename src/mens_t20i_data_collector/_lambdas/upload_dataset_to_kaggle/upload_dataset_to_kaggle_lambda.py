@@ -38,7 +38,6 @@ class KaggleDatasetUploader:
         Uploads the dataset to Kaggle.
         """
         os.makedirs(self._folder_to_keep_the_files_to_upload, exist_ok=True)
-        self._create_metadata_json_file()
         self._download_dataset_files_from_s3()
         self._authenticate_to_kaggle_and_upload_dataset()
 
@@ -58,10 +57,11 @@ class KaggleDatasetUploader:
             team_1 = last_match_details["team_1"]
             team_2 = last_match_details["team_2"]
             date = last_match_details["date"]
+            self._create_metadata_json_file(date)
             api.dataset_create_version(
                 delete_old_versions=True,
                 folder=self._folder_to_keep_the_files_to_upload,
-                version_notes=f"Dataset updated till the match between {team_1} and {team_2} on {date}",
+                version_notes=f"Updated till the match between {team_1} and {team_2} on {date}",
             )
             logger.info("Dataset uploaded to Kaggle successfully")
         except Exception as e:
@@ -83,13 +83,14 @@ class KaggleDatasetUploader:
         os.environ["KAGGLE_CONFIG_DIR"] = self._temporary_directory
         logger.info(f"kaggle.json file created at the temporary path {kaggle_json_file_path}")
 
-    def _create_metadata_json_file(self):
+    def _create_metadata_json_file(self, date):
         """
         Creates a metadata.json file with the dataset metadata for Kaggle API.
         """
         logger.info("Creating metadata.json file...")
         metadata = {
             "id": f"{self._kaggle_username}/{get_environmental_variable_value('KAGGLE_DATASET_SLUG')}",
+            "subtitle": f"Complete T20I data updated till {date} for ML & match analysis"
         }
         metadata_file_path = os.path.join(self._folder_to_keep_the_files_to_upload, "dataset-metadata.json")
         with open(metadata_file_path, "w", encoding="utf-8") as metadata_file:
