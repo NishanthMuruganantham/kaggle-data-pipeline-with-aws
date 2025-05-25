@@ -1,8 +1,13 @@
+import datetime
 import functools
 import logging
 import os
 from typing import Any
+import requests
 from botocore.exceptions import ClientError
+from mens_t20i_data_collector._lambdas.constants import (
+    TELEGRAM_MESSAGE_TEMPLATE
+)
 
 # Set up logging
 logger = logging.getLogger()
@@ -15,14 +20,42 @@ def exception_handler(function):
     """
     @functools.wraps(function)
     def wrapper(*args, **kwargs):
+        current_time = datetime.datetime.now()
+        function_name = "unknown_function"
+        for arg in args:
+            if hasattr(arg, "function_name"):
+                function_name = arg.function_name
+                break
         try:
             response_body = function(*args, **kwargs)
+            send_alert_via_telegram_bot(
+                chat_id=get_environmental_variable_value("TELEGRAM_CHAT_ID"),
+                message=TELEGRAM_MESSAGE_TEMPLATE.format(
+                    current_time.strftime("%d-%m-%Y"),
+                    current_time.strftime("%H:%M:%S"),
+                    function_name,
+                    "SUCCESS ✅",
+                    response_body
+                ),
+                telegram_bot_token=get_environmental_variable_value("TELEGRAM_BOT_TOKEN")
+            )
             return {
                 "statusCode": 200,
                 "body": response_body
             }
         except Exception as e:  # pylint: disable=broad-exception-caught
             logger.error(f"Error occurred: {str(e)}", exc_info=True)
+            send_alert_via_telegram_bot(
+                chat_id=get_environmental_variable_value("TELEGRAM_CHAT_ID"),
+                message=TELEGRAM_MESSAGE_TEMPLATE.format(
+                    current_time.strftime("%d-%m-%Y"),
+                    current_time.strftime("%H:%M:%S"),
+                    function_name,
+                    "ERROR ❌",
+                    str(e)
+                ),
+                telegram_bot_token=get_environmental_variable_value("TELEGRAM_BOT_TOKEN")
+            )
             return {
                 "statusCode": 500,
                 "body": f"Internal Server Error: {str(e)}"
@@ -71,3 +104,22 @@ def parse_eventbridge_event_message(function):
         return function(json_file_key, match_id)
 
     return wrapper
+
+
+def send_alert_via_telegram_bot(chat_id: str,  message: str, telegram_bot_token: str, ) -> None:
+    """
+    Sends the statsu of the function execution through an alert to a Telegram chat.
+
+    :param telegram_bot_token: Telegram bot token
+    :param chat_id: Chat ID
+    :param message: Message to send in HTML format
+    """
+    url = f"https://api.telegram.org/bot{telegram_bot_token}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": message,
+        "parse_mode": "HTML"
+    }
+    response = requests.post(url, json=payload, timeout=10)
+    if response.status_code != 200:
+        print(f"Failed to send message: {response.text}")

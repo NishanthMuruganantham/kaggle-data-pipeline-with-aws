@@ -82,4 +82,4 @@ def handler(_, __):     # noqa: Vulture
     """
     dataset_preparation_handler = DatasetPreparationHandler()
     dataset_preparation_handler.prepare_dataset()
-    return "Datasets prepared and uploaded successfully."
+    return "Datasets prepared and uploaded to S3 successfully."

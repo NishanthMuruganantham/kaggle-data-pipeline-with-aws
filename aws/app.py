@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-import boto3
 import aws_cdk as cdk
-from constants import SSM_PARAMETER_PREFIX
-from utils import get_parameter_from_ssm
+from parameters import (
+    account_id,
+    cricsheet_data_downloading_bucket_name,
+    region,
+    stack_name,
+)
 from mens_t20i_dataset_stack import MenT20IDatasetStack
-
-
-# Fetch values from SSM
-ssm = boto3.client('ssm')
-account_id = get_parameter_from_ssm(ssm, f"{SSM_PARAMETER_PREFIX}account_id")
-cricsheet_data_downloading_bucket_name = get_parameter_from_ssm(ssm, f"{SSM_PARAMETER_PREFIX}cricsheet_data_downloading_bucket")
-region = get_parameter_from_ssm(ssm, f"{SSM_PARAMETER_PREFIX}aws_region")
-stack_name = get_parameter_from_ssm(ssm, f"{SSM_PARAMETER_PREFIX}stack_name")
 
 
 app = cdk.App()

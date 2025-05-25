@@ -15,6 +15,7 @@ from aws_cdk import (
 import boto3
 from constructs import Construct
 from constants import AWS_SDK_PANDAS_LAYER_ARN, THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING
+from parameters import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 from utils import get_secret_from_secrets_manager
 
 
@@ -90,6 +91,8 @@ class MenT20IDatasetStack(Stack):
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
                 "THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING": THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING,
+                "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+                "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
             function_name="cricsheet-data-downloading-lambda",
             layers=[
@@ -140,6 +143,8 @@ class MenT20IDatasetStack(Stack):
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 **__db_secrets,
                 "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
+                "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+                "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
             function_name="cricsheet-deliverywise-data-extraction-lambda",
             layers=[
@@ -201,6 +206,8 @@ class MenT20IDatasetStack(Stack):
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 **__db_secrets,
                 "DYNAMODB_TABLE_NAME": dynamodb_to_store_file_status_data.table_name,
+                "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+                "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
             function_name="cricsheet-matchwise-data-extraction-lambda",
             layers=[
@@ -261,6 +268,8 @@ class MenT20IDatasetStack(Stack):
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 **__db_secrets,
+                "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+                "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
             function_name="convert-mongo-data-to-csv-lambda",
             layers=[
@@ -301,6 +310,8 @@ class MenT20IDatasetStack(Stack):
             environment={
                 "DOWNLOAD_BUCKET_NAME": cricsheet_data_downloading_bucket.bucket_name,
                 **__kaggle_secrets,
+                "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
+                "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
             function_name="upload-dataset-to-kaggle-lambda",
             layers=[

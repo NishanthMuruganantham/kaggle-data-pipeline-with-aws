@@ -39,3 +39,17 @@ DELIVERYWISE_DATAFRAME_COLUMNS = [
         "fielder_name"
 ]
 MATCHWISE_DATA_CSV_FILE_NAME: str = "matchwise_data.csv"
+TELEGRAM_MESSAGE_TEMPLATE: str = """
+<b>🏏 T20I Data Extraction Pipeline Status - {}</b>
+
+
+<b> Timestamp :</b> {}
+
+<b> Lambda Name :</b> {}
+
+<b> Execution Status :</b> {}
+
+<b> Message :</b> {}
+
+-- Automated Message from T20I Data Extraction Pipeline --
+"""
