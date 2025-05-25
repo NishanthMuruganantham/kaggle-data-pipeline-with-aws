@@ -119,8 +119,8 @@ class DownloadDataFromCricsheetHandler:
             logger.info(f"File {file} uploaded to {key}")
 
 
-@exception_handler
-def handler(_, __):     # noqa: Vulture
+@exception_handler      # noqa: Vulture
+def handler(_, __):
     downloader = DownloadDataFromCricsheetHandler()
     zip_file_path = downloader.download_data_from_cricsheet()
     output = downloader.upload_new_json_data_files_for_data_processing(zip_file_path)
