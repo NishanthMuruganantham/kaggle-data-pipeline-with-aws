@@ -10,6 +10,7 @@ from mens_t20i_data_collector._lambdas.constants import (
     CRICSHEET_DATA_S3_FOLDER_TO_STORE_PROCESSED_JSON_FILES_ZIP
 )
 from mens_t20i_data_collector._lambdas.utils import (
+    exception_handler,
     get_environmental_variable_value
 )
 
@@ -72,6 +73,9 @@ class DownloadDataFromCricsheetHandler:
         self._upload_new_json_files_to_s3(new_files=new_files)
         if new_files:
             self._trigger_an_sqs_message_whenever_new_file_is_downloaded(new_files=new_files)
+            return "Data file has been downloaded and placed successfully for processing"
+        logger.info("No new files to process")
+        return "No new files to process"
 
     def _list_all_files_from_dynamo_db(self) -> Set:
         response = self._dynamo_db_to_store_file_data_extraction_status.scan(ProjectionExpression="file_name")
@@ -115,21 +119,10 @@ class DownloadDataFromCricsheetHandler:
             logger.info(f"File {file} uploaded to {key}")
 
 
-def handler(_, __):     # noqa: Vulture
-    try:
-        downloader = DownloadDataFromCricsheetHandler()
-        zip_file_path = downloader.download_data_from_cricsheet()
-        downloader.upload_new_json_data_files_for_data_processing(zip_file_path)
-
-        logging.shutdown()
-        return {
-            "statusCode": 200,
-            "body": "Data downloaded and placed successfully for processing"
-        }
-    except Exception as e:      # pylint: disable=broad-exception-caught
-        logger.error(f"Handler execution failed: {e}")
-        logging.shutdown()
-        return {
-            "statusCode": 500,
-            "body": f"Internal Server Error: {str(e)}"
-        }
+@exception_handler      # noqa: Vulture
+def handler(_, __):
+    downloader = DownloadDataFromCricsheetHandler()
+    zip_file_path = downloader.download_data_from_cricsheet()
+    output = downloader.upload_new_json_data_files_for_data_processing(zip_file_path)
+    logging.shutdown()
+    return output
