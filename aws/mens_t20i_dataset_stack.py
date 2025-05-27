@@ -69,20 +69,20 @@ class MenT20IDatasetStack(Stack):
         # Lambda layer containing the necessary code and packages
         package_layer = _lambda.LayerVersion(
             self,
-            f"{stack_name}-MensT20IDataCollectorLayer",
+            f"{stack_name}-project-core-layer",
             code=_lambda.Code.from_asset("output/mens_t20i_data_collector.zip"),
             compatible_runtimes=[_lambda.Runtime.PYTHON_3_11],
             description="Layer containing the necessary code and packages for collecting men's T20I data",
         )
         # Pandas layer by AWS
-        pandas_layer = _lambda.LayerVersion.from_layer_version_arn(self, "PandasLayer", AWS_SDK_PANDAS_LAYER_ARN)
+        pandas_layer = _lambda.LayerVersion.from_layer_version_arn(self, f"{stack_name}-pandas-layer", AWS_SDK_PANDAS_LAYER_ARN)
 
         ########################################### LAMBDA CONFIGURATIONS #######################################################
 
         # Lambda function for downloading data from Cricsheet
         cricsheet_data_downloading_lambda = _lambda.Function(
             self,
-            "cricsheet_data_downloading_lambda",
+            f"{stack_name}-cricsheet-data-downloading-lambda",
             code=_lambda.Code.from_asset("output/download_from_cricsheet_lambda_function.zip"),
             handler="download_from_cricsheet_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -94,7 +94,7 @@ class MenT20IDatasetStack(Stack):
                 "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
                 "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
-            function_name="cricsheet-data-downloading-lambda",
+            function_name=f"{stack_name}-cricsheet-data-downloading-lambda",
             layers=[
                 package_layer,
             ],
@@ -120,7 +120,7 @@ class MenT20IDatasetStack(Stack):
         # EventBridge Rule to trigger the Lambda every Monday at 12:00 AM UTC
         event_bridge_rule_to_trigger_cricsheet_data_downloading_lambda = events.Rule(
             self,
-            "event_bridge_rule_to_trigger_cricsheet_data_downloading_lambda",
+            f"{stack_name}_event_bridge_rule_to_trigger_cricsheet_data_downloading_lambda",
             schedule=events.Schedule.cron(
                 minute="0",
                 hour="0",
@@ -135,7 +135,7 @@ class MenT20IDatasetStack(Stack):
         # Lambda function for extracting deliverywise cricsheet data
         cricsheet_deliverywise_data_extraction_lambda = _lambda.Function(
             self,
-            "cricsheet_deliverywise_data_extraction_lambda",
+            f"{stack_name}-cricsheet-deliverywise-data-extraction-lambda",
             code=_lambda.Code.from_asset("output/extract_deliverywise_cricsheet_data_lambda_function.zip"),
             handler="extract_deliverywise_cricsheet_data_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -146,7 +146,7 @@ class MenT20IDatasetStack(Stack):
                 "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
                 "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
-            function_name="cricsheet-deliverywise-data-extraction-lambda",
+            function_name=f"{stack_name}-deliverywise-data-extraction-lambda",
             layers=[
                 package_layer,
                 pandas_layer,
@@ -171,7 +171,7 @@ class MenT20IDatasetStack(Stack):
         )
         event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda = events.Rule(
             self,
-            "event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda",
+            f"{stack_name}_event_bridge_rule_to_trigger_deliverywise_data_extraction_lambda",
             event_pattern=events.EventPattern(
                 source=["aws.s3"],
                 detail_type=["Object Created"],
@@ -198,7 +198,7 @@ class MenT20IDatasetStack(Stack):
         # Lambda function for extracting matchwise cricsheet data
         cricsheet_matchwise_data_extraction_lambda = _lambda.Function(
             self,
-            "cricsheet_matchwise_data_extraction_lambda",
+            f"{stack_name}-cricsheet-matchwise-data-extraction-lambda",
             code=_lambda.Code.from_asset("output/extract_matchwise_cricsheet_data_lambda_function.zip"),
             handler="extract_matchwise_cricsheet_data_lambda_function.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -209,7 +209,7 @@ class MenT20IDatasetStack(Stack):
                 "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
                 "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
-            function_name="cricsheet-matchwise-data-extraction-lambda",
+            function_name=f"{stack_name}-matchwise-data-extraction-lambda",
             layers=[
                 package_layer,
                 pandas_layer,
@@ -234,7 +234,7 @@ class MenT20IDatasetStack(Stack):
         )
         event_bridge_rule_to_trigger_matchwise_data_extraction_lambda = events.Rule(
             self,
-            "event_bridge_rule_to_trigger_matchwise_data_extraction_lambda",
+            f"{stack_name}_event_bridge_rule_to_trigger_matchwise_data_extraction_lambda",
             event_pattern=events.EventPattern(
                 source=["aws.s3"],
                 detail_type=["Object Created"],
@@ -261,7 +261,7 @@ class MenT20IDatasetStack(Stack):
         # Lambda function to convert the stored data in MongoDB table to CSV and store in S3
         convert_mongodb_data_to_csv_lambda = _lambda.Function(
             self,
-            "convert_mongodb_data_to_csv_lambda",
+            f"{stack_name}-convert-mongo-data-to-csv-lambda",
             code=_lambda.Code.from_asset("output/convert_mongo_db_data_to_csv_lambda.zip"),
             handler="convert_mongo_db_data_to_csv_lambda.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -271,7 +271,7 @@ class MenT20IDatasetStack(Stack):
                 "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
                 "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
-            function_name="convert-mongo-data-to-csv-lambda",
+            function_name=f"{stack_name}-convert-mongo-data-to-csv-lambda",
             layers=[
                 package_layer,
                 pandas_layer,
@@ -303,7 +303,7 @@ class MenT20IDatasetStack(Stack):
         # Lambda function to upload the dataset to KAGGLE and create a new version of dataset
         upload_dataset_to_kaggle_lambda = _lambda.Function(
             self,
-            "upload_dataset_to_kaggle_lambda",
+            f"{stack_name}-upload-dataset-to-kaggle-lambda",
             code=_lambda.Code.from_asset("output/upload_dataset_to_kaggle_lambda.zip"),
             handler="upload_dataset_to_kaggle_lambda.handler",
             runtime=_lambda.Runtime.PYTHON_3_11,
@@ -313,7 +313,7 @@ class MenT20IDatasetStack(Stack):
                 "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
                 "TELEGRAM_CHAT_ID": TELEGRAM_CHAT_ID,
             },
-            function_name="upload-dataset-to-kaggle-lambda",
+            function_name=f"{stack_name}-upload-dataset-to-kaggle-lambda",
             layers=[
                 package_layer,
                 pandas_layer,
