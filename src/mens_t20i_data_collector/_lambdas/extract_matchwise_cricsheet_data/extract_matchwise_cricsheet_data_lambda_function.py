@@ -116,4 +116,4 @@ class MatchwiseCricsheetDataExtractionHandler:
 def handler(json_file_key, match_id):
     matchwise_cricsheet_data_extraction_handler = MatchwiseCricsheetDataExtractionHandler(match_id)
     matchwise_cricsheet_data_extraction_handler.extract_matchwise_cricsheet_data(json_file_key)
-    return "Matchwise cricsheet data extraction completed successfully!"
+    return f"Matchwise data has been successfully extracted for match_id - {match_id}."

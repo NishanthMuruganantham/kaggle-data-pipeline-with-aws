@@ -207,7 +207,4 @@ class DeliverywiseCricsheetDataExtractionHandler:
 def handler(json_file_key, match_id):
     extractor = DeliverywiseCricsheetDataExtractionHandler(match_id)
     extractor.extract_deliverywise_cricsheet_data(json_file_key)
-    return {
-        "statusCode": 200,
-        "body": "Data Processed successfully"
-    }
+    return f"Deliverywise data has been successfully extracted for match_id - {match_id}."
