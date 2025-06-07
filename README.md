@@ -16,3 +16,10 @@ The dataset is kept current with automated weekly updates, delivering up-to-date
 All critical steps in the workflow send real-time execution status updates via a Telegram bot.
 
 ---
+## Pipeline Architecture Overview ⚙️
+
+The data pipeline is designed using a fully serverless, event-driven architecture on AWS, ensuring scalability, efficiency, and automation throughout the data lifecycle. Here’s how the workflow operates:
+
+![Pipeline Architecture](pipeline_architecture.svg)
+
+---
