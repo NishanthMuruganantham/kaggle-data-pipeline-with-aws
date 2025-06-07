@@ -23,3 +23,33 @@ The data pipeline is designed using a fully serverless, event-driven architectur
 ![Pipeline Architecture](pipeline_architecture.svg)
 
 ---
+## Tech Stack 🧰
+
+### Programming Languages
+- Python
+
+### AWS Services
+- AWS Lambda  
+- CloudWatch  
+- EventBridge  
+- SQS  
+- S3  
+- DynamoDB  
+- Parameter Store  
+
+### Database
+- MongoDB Atlas  
+
+### Automation & Infrastructure
+- AWS CDK (Python)  
+
+### Data Publishing
+- Kaggle API  
+
+### Notifications
+- Telegram Bot API  
+
+### Documentation & Diagrams
+- draw.io (diagrams.net)
+
+---
