@@ -18,11 +18,15 @@ All critical steps in the workflow send real-time execution status updates via a
 ---
 ## Pipeline Architecture Overview ⚙️
 
-The data pipeline is designed using a fully serverless, event-driven architecture on AWS, ensuring scalability, efficiency, and automation throughout the data lifecycle. Here’s how the workflow operates:
+The data pipeline is designed using a fully serverless, event-driven architecture on AWS, ensuring scalability, efficiency, and automation throughout the data lifecycle. 
+
+Here’s how the workflow operates:
 
 ![Pipeline Architecture](pipeline_architecture.svg)
 
 ---
+<br>
+
 ## Tech Stack 🧰
 
 
@@ -37,9 +41,10 @@ The data pipeline is designed using a fully serverless, event-driven architectur
 | Documentation          | draw.io (diagrams.net)                   |
 
 ---
+
 ## 🧱 Infrastructure as Code (IaC)
 
-This project embraces the **Infrastructure as Code (IaC)** philosophy using **[AWS CDK](https://docs.aws.amazon.com/cdk/)** (in Python) to provision and manage cloud resources.
+This project embraces the practice of **Infrastructure as Code (IaC)** philosophy using **[AWS CDK](https://docs.aws.amazon.com/cdk/)** (in Python) to provision and manage cloud resources.
 
 
 ### 💡 Advantages of leveraging IaC
@@ -74,7 +79,7 @@ For every code changes, this project is leveraing `build_packages` and `cdk depl
 This utility script automates the packaging process for both:
 
 - 📦 **AWS Lambda Layers** (for dependencies like `pymongo`, `kaggle`, `requests`)
-- 🧾 **Lambda Handler Zips** (each respective Lambda code files)
+- 🧾 **Lambda Handler Zips** (each respective Lambda function code files)
 
 #### What It Does
 
@@ -107,6 +112,10 @@ cdk deploy
 
 This project is a solo build by me, but if you'd like to raise issues, fork, or explore, feel free to open a discussion or submit a pull request.
 
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
+
+©<a href="https://github.com/NishanthMuruganantham">Nishanth</a>
