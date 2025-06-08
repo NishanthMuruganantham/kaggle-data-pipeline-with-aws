@@ -69,7 +69,7 @@ With AWS CDK, the following resources are created and configured programmaticall
 
 
 ---
-## 📦 Code Packaging Packaging & Deployment
+## 📦 Code Packaging
 
 For every code changes, this project is leveraing `build_packages` and `cdk deploy` commands to package and deploy the code respectively.
 
@@ -80,7 +80,7 @@ This utility script automates the packaging process for both:
 - 📦 **AWS Lambda Layers** (for dependencies like `pymongo`, `kaggle`, `requests`)
 - 🧾 **Lambda Handler Zips** (each respective Lambda function code files)
 
-#### What It Does
+#### Purposes
 
 The `build_packages.py` script streamlines the deployment workflow by:
 
@@ -96,6 +96,8 @@ The `build_packages.py` script streamlines the deployment workflow by:
 3. **Cleaning Up:**
    - Removes temporary folders and tarballs to keep your workspace clean
 
+---
+
 ## 🚀 Deployment
 After packages, all the resources will get deployed with the CDK command 
 
@@ -106,6 +108,8 @@ cdk deploy
 - This command deploys S3 buckets, Lambda functions, DynamoDb tables, EventBridge rules, SQS queues, IAM roles, SSM parameters and CloudWatch schedulers.
 
 - Everything is deployed in one go via a single CDK stack, making the infrastructure highly repeatable and version-controlled.
+
+---
 
 ## 🤝 Contribution
 
