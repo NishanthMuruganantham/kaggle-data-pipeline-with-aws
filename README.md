@@ -25,7 +25,6 @@ Here’s how the workflow operates:
 ![Pipeline Architecture](pipeline_architecture.svg)
 
 ---
-<br>
 
 ## Tech Stack 🧰
 
@@ -70,11 +69,11 @@ With AWS CDK, the following resources are created and configured programmaticall
 
 
 ---
-## 🚀 Packaging & Deployment
+## 📦 Code Packaging Packaging & Deployment
 
 For every code changes, this project is leveraing `build_packages` and `cdk deploy` commands to package and deploy the code respectively.
 
-### 🛠  Lambda Packaging Utility (`build_packages.py`) 
+### 🛠  Lambda Packaging Utility (`src\build\build_packages.py`) 
 
 This utility script automates the packaging process for both:
 
@@ -97,7 +96,7 @@ The `build_packages.py` script streamlines the deployment workflow by:
 3. **Cleaning Up:**
    - Removes temporary folders and tarballs to keep your workspace clean
 
-### 📦 CDK Deployment
+## 🚀 Deployment
 After packages, all the resources will get deployed with the CDK command 
 
 ```bash
@@ -112,10 +111,10 @@ cdk deploy
 
 This project is a solo build by me, but if you'd like to raise issues, fork, or explore, feel free to open a discussion or submit a pull request.
 
----
-
 ## 📄 License
 
 This project is licensed under the MIT License – see the [LICENSE](LICENSE) file for details.
 
 ©<a href="https://github.com/NishanthMuruganantham">Nishanth</a>
+
+---
