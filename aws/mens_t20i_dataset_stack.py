@@ -297,6 +297,7 @@ class MenT20IDatasetStack(Stack):
             lambda_event_sources.SqsEventSource(
                 sqs_queue_to_send_delayed_message_when_new_file_is_downloaded,
                 batch_size=1,
+                enabled=True,
             )
         )
 
