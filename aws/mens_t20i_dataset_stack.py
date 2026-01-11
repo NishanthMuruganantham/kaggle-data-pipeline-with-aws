@@ -15,8 +15,17 @@ from aws_cdk import (
 import boto3
 from constructs import Construct
 from constants import AWS_SDK_PANDAS_LAYER_ARN, THRESHOLD_FOR_NUMBER_OF_FILES_TO_BE_SENT_FOR_PROCESSING
-from parameters import KAGGLE_DATASET_SLUG, KAGGLE_USERNAME, KAGGLE_SECRET_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
-from utils import get_secret_from_secrets_manager
+from parameters import (
+    DELIVERYWISE_DATA_COLLECTION_NAME,
+    MATCHWISE_DATA_COLLECTION_NAME,
+    KAGGLE_DATASET_SLUG,
+    KAGGLE_USERNAME,
+    KAGGLE_SECRET_KEY,
+    MONGO_DB_NAME,
+    MONGO_DB_URL,
+    TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID,
+)
 
 
 class MenT20IDatasetStack(Stack):
@@ -61,7 +70,12 @@ class MenT20IDatasetStack(Stack):
         )
 
         ########################################  SECRET MANAGER Configurations ##########################################
-        __db_secrets = get_secret_from_secrets_manager(self._secret_manager_client, "db_secret")
+        __db_secrets = {
+            "DELIVERYWISE_DATA_COLLECTION_NAME": DELIVERYWISE_DATA_COLLECTION_NAME,
+            "MATCHWISE_DATA_COLLECTION_NAME": MATCHWISE_DATA_COLLECTION_NAME,
+            "MONGO_DB_NAME": MONGO_DB_NAME,
+            "MONGO_DB_URL": MONGO_DB_URL,
+        }
         __kaggle_secrets = {
             "KAGGLE_DATASET_SLUG": KAGGLE_DATASET_SLUG,
             "KAGGLE_SECRET_KEY": KAGGLE_SECRET_KEY,
