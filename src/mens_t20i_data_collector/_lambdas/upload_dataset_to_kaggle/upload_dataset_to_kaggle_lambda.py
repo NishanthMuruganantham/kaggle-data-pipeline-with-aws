@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import tempfile
+from datetime import datetime
 import boto3
 import pandas as pd
 from mens_t20i_data_collector._lambdas.constants import (
@@ -56,7 +57,8 @@ class KaggleDatasetUploader:
             last_match_details = self._get_last_match_details()
             team_1 = last_match_details["team_1"]
             team_2 = last_match_details["team_2"]
-            date = last_match_details["date"]
+            date: str = last_match_details["date"]
+            date = datetime.strptime(date, "%Y-%m-%d").strftime("%d/%m/%Y")
             self._create_metadata_json_file(date)
             api.dataset_create_version(
                 delete_old_versions=True,
